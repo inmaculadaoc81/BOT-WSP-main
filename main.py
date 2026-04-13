@@ -1,0 +1,753 @@
+import logging
+import json
+import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from fastapi import FastAPI, Request, Response, HTTPException, Query
+from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from config import settings
+
+# Rate limiter: max requests per IP
+limiter = Limiter(key_func=get_remote_address)
+
+# Per-phone rate limit settings
+PHONE_RATE_LIMIT = 10  # max messages per phone number
+PHONE_RATE_WINDOW = 60  # in seconds
+
+from database import Database
+from openai_service import OpenAIService
+from whatsapp_service import WhatsAppService
+from sheets_service import SheetsService
+from chatwoot_service import ChatwootService
+from odoo_service import OdooService
+from intent_classifier import classify_intent
+from faq_service import load_brand_faq
+from calendar_service import CalendarService
+
+# Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# Services
+db = Database()
+openai_svc = OpenAIService()
+whatsapp_svc = WhatsAppService()
+sheets_svc = SheetsService()
+chatwoot_svc = ChatwootService()
+odoo_svc = OdooService()
+calendar_svc = CalendarService()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown events."""
+    await db.init()
+    logger.info("Database initialized")
+    await sheets_svc.connect()
+    logger.info(f"Webhook verify token: {settings.VERIFY_TOKEN}")
+    yield
+    await db.close()
+    logger.info("Database closed")
+
+
+app = FastAPI(title="WhatsApp Bot API", version="1.0.1", lifespan=lifespan)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Return 429 when IP rate limit is exceeded."""
+    logger.warning(f"IP rate limit exceeded: {get_remote_address(request)}")
+    return JSONResponse(
+        status_code=429,
+        content={"error": "Too many requests. Try again later."},
+    )
+
+
+@app.get("/")
+async def health():
+    """Health check endpoint."""
+    return {"status": "ok", "service": "whatsapp-bot"}
+
+
+@app.get("/webhook")
+async def verify_webhook(
+    hub_mode: str = Query(None, alias="hub.mode"),
+    hub_verify_token: str = Query(None, alias="hub.verify_token"),
+    hub_challenge: str = Query(None, alias="hub.challenge"),
+):
+    """
+    Meta webhook verification.
+    Meta sends a GET request with a challenge to verify your endpoint.
+    """
+    if hub_mode == "subscribe" and hub_verify_token == settings.VERIFY_TOKEN:
+        logger.info("Webhook verified successfully")
+        return Response(content=hub_challenge, media_type="text/plain")
+
+    logger.warning(f"Webhook verification failed. Mode: {hub_mode}")
+    raise HTTPException(status_code=403, detail="Verification failed")
+
+
+@app.post("/webhook")
+@limiter.limit("30/minute")
+async def receive_message(request: Request):
+    """
+    Receive incoming WhatsApp messages from Meta.
+    Must return 200 quickly to avoid Meta retrying.
+    """
+    body = await request.json()
+    logger.info(f"Incoming webhook: {json.dumps(body, indent=2)}")
+
+    try:
+        # Extract message data from Meta's webhook format
+        entry = body.get("entry", [])
+        if not entry:
+            return {"status": "no entry"}
+
+        changes = entry[0].get("changes", [])
+        if not changes:
+            return {"status": "no changes"}
+
+        value = changes[0].get("value", {})
+        messages = value.get("messages", [])
+
+        if not messages:
+            # Could be a status update (delivered, read, etc.)
+            logger.info("No messages in webhook (status update)")
+            return {"status": "no messages"}
+
+        message = messages[0]
+        sender = message.get("from")  # Phone number of sender
+        msg_type = message.get("type")
+
+        # Only handle text messages for now
+        if msg_type != "text":
+            logger.info(f"Ignoring non-text message type: {msg_type}")
+            await whatsapp_svc.send_message(
+                to=sender,
+                text="Por ahora solo puedo leer mensajes de texto. 😊",
+            )
+            return {"status": "non-text ignored"}
+
+        text = message["text"]["body"]
+        logger.info(f"Message from {sender}: {text}")
+
+        # Per-phone rate limiting
+        recent = await db.count_recent_messages(sender, seconds=PHONE_RATE_WINDOW)
+        if recent >= PHONE_RATE_LIMIT:
+            logger.warning(f"Phone rate limit exceeded for {sender} ({recent} msgs in {PHONE_RATE_WINDOW}s)")
+            await whatsapp_svc.send_message(
+                to=sender,
+                text="Estás enviando mensajes muy rápido. Por favor espera un momento antes de continuar.",
+            )
+            return {"status": "phone_rate_limited"}
+
+        # Check conversation mode (bot or human)
+        mode = await db.get_conversation_mode(sender)
+
+        if mode == "human":
+            # In human mode, just save the message (agent sees it in panel)
+            await db.save_message(sender, "user", text)
+            logger.info(f"Message saved for human agent (sender: {sender})")
+            return {"status": "human mode"}
+
+        # Bot mode: get conversation history for context
+        history = await db.get_history(sender, limit=10)
+
+        # Save user message
+        await db.save_message(sender, "user", text)
+
+        # Classify intent (cheap gpt-4o-mini call)
+        intent = await classify_intent(
+            client=openai_svc.client,
+            user_message=text,
+            history=history,
+        )
+        logger.info(f"Intent for {sender}: {intent}")
+
+        # Handoff to human agent if requested
+        if intent.needs_human:
+            if is_within_business_hours():
+                await db.save_message(sender, "assistant", HANDOFF_MESSAGE)
+                await whatsapp_svc.send_message(to=sender, text=HANDOFF_MESSAGE)
+                await _handle_handoff(sender)
+                return {"status": "handoff"}
+            else:
+                msg = get_outside_hours_message()
+                await db.save_message(sender, "assistant", msg)
+                await whatsapp_svc.send_message(to=sender, text=msg)
+                logger.info(f"Handoff denied for {sender} — outside business hours")
+                return {"status": "outside_hours"}
+
+        # Fetch only what's needed based on classification
+        extra_context_parts = []
+
+        needs_repair = intent.needs_repair_lookup
+        if needs_repair:
+            repair_ctx = await _repair_lookup(sender, text)
+            if repair_ctx:
+                extra_context_parts.append(repair_ctx)
+
+        if intent.needs_prices:
+            try:
+                prices = await sheets_svc.get_all_prices()
+                if prices:
+                    extra_context_parts.append(sheets_svc.format_prices_for_prompt(prices))
+            except Exception as e:
+                logger.error(f"Error fetching prices: {e}", exc_info=True)
+
+        if intent.wants_appointment:
+            extra_context_parts.append(calendar_svc.get_appointment_context())
+
+        extra_context = "\n\n".join(extra_context_parts) if extra_context_parts else None
+
+        # Load brand-specific FAQ if classified
+        brand_faq = None
+        if intent.brand:
+            brand_faq = load_brand_faq(intent.brand)
+
+        # Generate AI response
+        ai_response = await openai_svc.generate_response(
+            user_message=text,
+            history=history,
+            extra_context=extra_context,
+            brand_faq=brand_faq,
+        )
+
+        # Check if AI wants to transfer to agent (product purchase)
+        if "TRANSFERIR_AGENTE" in ai_response:
+            clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
+            handoff_msg = HANDOFF_MESSAGE if is_within_business_hours() else get_outside_hours_message()
+            full_msg = f"{clean_response}\n\n{handoff_msg}" if clean_response else handoff_msg
+            await db.save_message(sender, "assistant", full_msg)
+            await whatsapp_svc.send_message(to=sender, text=full_msg)
+            if is_within_business_hours():
+                await _handle_handoff(sender)
+            return {"status": "handoff"}
+
+        # Check if AI confirmed an appointment or pickup
+        clean_response = ai_response
+        if "CONFIRMAR_CITA|" in ai_response or "CONFIRMAR_ENVIO|" in ai_response:
+            clean_response, ai_response = await _process_appointment(
+                ai_response, sender
+            )
+
+        # Save bot response
+        await db.save_message(sender, "assistant", clean_response)
+
+        # Send response via WhatsApp
+        await whatsapp_svc.send_message(to=sender, text=clean_response)
+
+        logger.info(f"Response sent to {sender}: {clean_response[:100]}...")
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.error(f"Error processing message: {e}", exc_info=True)
+        return {"status": "error"}
+
+
+HANDOFF_MESSAGE = (
+    "🔄 Te transfiero con un compañero del *equipo técnico*. "
+    "En breve te atenderán."
+)
+
+# Spanish holidays 2026 (update yearly)
+HOLIDAYS_2026 = {
+    "01-01", "01-06", "04-02", "04-03", "05-01",
+    "08-15", "10-12", "11-02", "12-07", "12-08", "12-25",
+}
+
+WEEKDAY_NAMES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+
+
+def _get_madrid_now() -> datetime:
+    return datetime.now(ZoneInfo("Europe/Madrid"))
+
+
+def is_within_business_hours() -> bool:
+    """Check if current time is within L-V 9:30-18:00 Madrid time, excluding holidays."""
+    now = _get_madrid_now()
+    if now.weekday() >= 5:
+        return False
+    if now.strftime("%m-%d") in HOLIDAYS_2026:
+        return False
+    current_time = now.hour * 60 + now.minute
+    return 9 * 60 + 30 <= current_time < 18 * 60
+
+
+def get_outside_hours_message() -> str:
+    """Build message with the next business day/time."""
+    now = _get_madrid_now()
+    current_time = now.hour * 60 + now.minute
+
+    from datetime import timedelta
+
+    # Find next business day/time
+    if now.weekday() < 5 and now.strftime("%m-%d") not in HOLIDAYS_2026 and current_time < 9 * 60 + 30:
+        when = "hoy a las *9:30*"
+    else:
+        next_day = now + timedelta(days=1)
+        for _ in range(7):
+            if next_day.weekday() < 5 and next_day.strftime("%m-%d") not in HOLIDAYS_2026:
+                break
+            next_day += timedelta(days=1)
+
+        diff_days = (next_day.date() - now.date()).days
+        if diff_days == 1:
+            when = "mañana a las *9:30*"
+        else:
+            day_name = WEEKDAY_NAMES[next_day.weekday()]
+            when = f"el *{day_name} a las 9:30*"
+
+    return (
+        f"🕐 En este momento estamos fuera de horario. Un compañero te atenderá "
+        f"{when}.\n\n"
+        f"Déjame tu *nombre* y *número de contacto* y te contactamos en cuanto abramos. "
+        f"Mientras tanto, puedo seguir ayudándote con cualquier consulta. 😊"
+    )
+
+
+async def _handle_handoff(sender_key: str, conversation_id: int | None = None):
+    """
+    Transfer the conversation to a human agent.
+    - If conversation_id is provided (Chatwoot webhook), use it directly.
+    - Otherwise (WhatsApp webhook), search Chatwoot by phone.
+    Sets mode to 'human' so the bot stops responding.
+    """
+    # Find conversation_id if not provided
+    if conversation_id is None:
+        conversation_id = await chatwoot_svc.find_conversation_by_phone(sender_key)
+
+    # Toggle conversation to open in Chatwoot so agent sees it
+    if conversation_id:
+        try:
+            await chatwoot_svc.handoff_to_agent(conversation_id)
+        except Exception as e:
+            logger.error(f"Failed to handoff conversation {conversation_id}: {e}", exc_info=True)
+
+        # Auto-assign to handoff agent (round-robin: Iván/Daniela)
+        try:
+            assigned = await chatwoot_svc.assign_handoff_agent(conversation_id)
+            if assigned:
+                logger.info(f"Handoff agent {assigned} auto-assigned to conversation {conversation_id}")
+        except Exception as e:
+            logger.error(f"Failed to auto-assign agent for conversation {conversation_id}: {e}", exc_info=True)
+
+    # Set mode to human so bot stops responding
+    await db.set_conversation_mode(sender_key, "human")
+    logger.info(f"Handoff complete for {sender_key} (conversation: {conversation_id})")
+
+
+# ── Repair lookup helper ──────────────────────────────────────────────
+
+_RESGUARDO_RE = re.compile(r"\b(\d{4,6})\b")
+
+
+async def _repair_lookup(phone: str, message: str) -> str | None:
+    """
+    Try to find repair data for the user.
+    1. Search by sender's phone number → show all repairs.
+    2. If a specific resguardo is mentioned, look it up (must belong to sender).
+    3. If nothing found, return security message.
+    Returns formatted context string, or None.
+    """
+    # Step 1: Search by sender phone
+    try:
+        repairs = await sheets_svc.get_repairs_by_phone(phone)
+        if repairs:
+            logger.info(f"Found {len(repairs)} repairs by phone for {phone}")
+            # If user mentioned a specific resguardo, also look it up
+            match = _RESGUARDO_RE.search(message)
+            if match:
+                resguardo = match.group(1)
+                try:
+                    repair = await sheets_svc.get_repair_by_resguardo(resguardo, phone)
+                    if repair:
+                        return sheets_svc.format_repairs_for_prompt([repair])
+                except Exception as e:
+                    logger.error(f"Error fetching resguardo {resguardo}: {e}", exc_info=True)
+            return sheets_svc.format_repairs_for_prompt(repairs)
+    except Exception as e:
+        logger.error(f"Error fetching repairs by phone: {e}", exc_info=True)
+
+    # Step 2: Look for resguardo in message (user has no repairs by phone)
+    match = _RESGUARDO_RE.search(message)
+    if match:
+        resguardo = match.group(1)
+        try:
+            repair = await sheets_svc.get_repair_by_resguardo(resguardo, phone)
+            if repair:
+                logger.info(f"Found repair by resguardo {resguardo} for {phone}")
+                return sheets_svc.format_repairs_for_prompt([repair])
+            else:
+                logger.info(f"Resguardo {resguardo} not found or doesn't belong to {phone}")
+                return (
+                    "[RESULTADO BUSQUEDA RESGUARDO]\n"
+                    f"El resguardo {resguardo} no esta asociado al numero del cliente.\n"
+                    "INSTRUCCIONES: Informa al cliente que por seguridad, las consultas de estado "
+                    "solo se pueden realizar desde el numero de movil registrado en el resguardo. "
+                    "Si necesita ayuda, puede llamar o acercarse a la tienda."
+                )
+        except Exception as e:
+            logger.error(f"Error fetching resguardo {resguardo}: {e}", exc_info=True)
+
+    # Step 3: No repairs found at all
+    return (
+        "[RESULTADO BUSQUEDA REPARACIONES]\n"
+        "No se encontraron reparaciones asociadas al numero de telefono del cliente.\n"
+        "INSTRUCCIONES: Informa al cliente que por seguridad, las consultas de estado "
+        "solo se pueden realizar desde el numero de movil registrado en el resguardo. "
+        "Si necesita ayuda, puede llamar o acercarse a la tienda."
+    )
+
+
+# ── Appointment helper ────────────────────────────────────────────────
+
+
+async def _process_appointment(ai_response: str, phone: str) -> tuple[str, str]:
+    """
+    Extract CONFIRMAR_CITA or CONFIRMAR_ENVIO line from AI response,
+    create the calendar event, and return (clean_response_for_user, original_response).
+    """
+    lines = ai_response.strip().split("\n")
+    confirm_line = None
+    other_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("CONFIRMAR_CITA|") or stripped.startswith("CONFIRMAR_ENVIO|"):
+            confirm_line = stripped
+        else:
+            other_lines.append(line)
+
+    clean_response = "\n".join(other_lines).strip()
+
+    if confirm_line:
+        try:
+            parts = confirm_line.split("|")
+            is_envio = parts[0] == "CONFIRMAR_ENVIO"
+
+            start_iso = parts[1]
+            client_name = parts[2] if len(parts) > 2 else "Cliente"
+            reason = parts[3] if len(parts) > 3 else "Servicio técnico"
+            address = parts[4] if len(parts) > 4 else ""
+
+            if is_envio:
+                title = f"Envío: {client_name} - {reason}"
+                description = f"Cliente: {client_name}\nMotivo: {reason}\nDirección: {address}\nCoste envío: 15€"
+            else:
+                title = f"Cita: {client_name} - {reason}"
+                description = f"Cliente: {client_name}\nMotivo: {reason}"
+
+            event = await calendar_svc.create_event(
+                title=title,
+                start_iso=start_iso,
+                description=description,
+                attendee_phone=phone,
+            )
+
+            if event:
+                logger.info(f"{'Pickup' if is_envio else 'Appointment'} created for {phone}: {start_iso}")
+            else:
+                logger.error(f"Failed to create event for {phone}")
+                clean_response += "\n\n(Hubo un problema al registrar. Por favor contacta directamente con la tienda.)"
+
+        except Exception as e:
+            logger.error(f"Error processing confirmation: {e}", exc_info=True)
+            clean_response += "\n\n(Hubo un problema al registrar. Por favor contacta directamente con la tienda.)"
+
+    return clean_response, ai_response
+
+
+# ── Chatwoot Agent Bot webhook ──────────────────────────────────────────
+
+
+@app.post("/chatwoot/webhook")
+@limiter.limit("30/minute")
+async def chatwoot_webhook(request: Request):
+    """
+    Receive incoming events from Chatwoot Agent Bot.
+    Chatwoot sends message_created events when a customer writes.
+    """
+    body = await request.json()
+    logger.info(f"Chatwoot webhook: {json.dumps(body, indent=2)}")
+
+    try:
+        event = body.get("event")
+        message_type = body.get("message_type")
+
+        # Handle conversation resolved → restore bot mode
+        if event == "conversation_status_changed":
+            status = body.get("status")
+            if status == "resolved":
+                conversation = body.get("id") or body.get("conversation", {}).get("id")
+                if conversation:
+                    sender_key = f"chatwoot_{conversation}"
+                    await db.set_conversation_mode(sender_key, "bot")
+                    logger.info(f"Conversation {conversation} resolved — bot mode restored")
+
+                    # Also restore by phone if available
+                    contact_inbox = body.get("contact_inbox", {})
+                    source_id = contact_inbox.get("source_id")
+                    if source_id:
+                        await db.set_conversation_mode(source_id, "bot")
+                        logger.info(f"Bot mode restored for phone {source_id}")
+
+                return {"status": "bot_restored"}
+            return {"status": "ignored"}
+
+        # Handle agent assigned/unassigned → toggle human/bot mode
+        if event == "conversation_updated":
+            # changed_attributes is an array of dicts, merge into one
+            changed_list = body.get("changed_attributes", [])
+            changed = {}
+            for item in changed_list:
+                changed.update(item)
+
+            if "assignee_id" in changed:
+                assignee = changed["assignee_id"]
+                current = assignee.get("current_value")
+                previous = assignee.get("previous_value")
+                conversation_id = body.get("id")
+
+                if conversation_id:
+                    sender_key = f"chatwoot_{conversation_id}"
+                    contact_inbox = body.get("contact_inbox", {})
+                    source_id = contact_inbox.get("source_id")
+
+                    if current and not previous:
+                        # Agent assigned → human mode
+                        await db.set_conversation_mode(sender_key, "human")
+                        if source_id:
+                            await db.set_conversation_mode(source_id, "human")
+                        logger.info(f"Agent {current} assigned to conversation {conversation_id} — human mode")
+                        return {"status": "agent_assigned"}
+
+                    elif not current and previous:
+                        # Agent unassigned → restore bot mode
+                        await db.set_conversation_mode(sender_key, "bot")
+                        if source_id:
+                            await db.set_conversation_mode(source_id, "bot")
+                        logger.info(f"Agent unassigned from conversation {conversation_id} — bot mode restored")
+                        return {"status": "agent_unassigned"}
+
+            return {"status": "ignored"}
+
+        # Only process incoming messages (from the customer)
+        if event != "message_created" or message_type != "incoming":
+            # Agent sent a message → activate human mode so bot doesn't interfere
+            # But ignore messages from the bot itself (sender type "agent_bot")
+            if event == "message_created" and message_type == "outgoing":
+                sender_info = body.get("sender", {})
+                sender_type = sender_info.get("type", "")
+                if sender_type == "agent_bot":
+                    logger.info(f"Ignoring bot's own outgoing message")
+                    return {"status": "bot_echo_ignored"}
+
+                conversation = body.get("conversation", {})
+                conv_id = conversation.get("id")
+                if conv_id:
+                    sender_key = f"chatwoot_{conv_id}"
+                    await db.set_conversation_mode(sender_key, "human")
+
+                    # Also set by phone so WhatsApp webhook respects it
+                    contact_inbox = conversation.get("contact_inbox", {})
+                    source_id = contact_inbox.get("source_id")
+                    if source_id:
+                        await db.set_conversation_mode(source_id, "human")
+
+                    logger.info(f"Agent message detected — human mode set for conversation {conv_id}")
+                    return {"status": "agent_mode"}
+
+            logger.info(f"Ignoring Chatwoot event: {event}, type: {message_type}")
+            return {"status": "ignored"}
+
+        # Extract data from Chatwoot payload
+        content = body.get("content", "")
+        conversation = body.get("conversation", {})
+        conversation_id = conversation.get("id")
+        sender = body.get("sender", {})
+        contact_id = sender.get("id")
+
+        if not conversation_id:
+            logger.warning("Missing conversation_id in Chatwoot webhook")
+            return {"status": "missing data"}
+
+        # Detect attachments (images, audio, video, files) or empty content
+        attachments = body.get("attachments", [])
+        if attachments or not content:
+            if attachments:
+                file_type = attachments[0].get("file_type", "file")
+                logger.info(f"Received {file_type} attachment in conversation {conversation_id}")
+            else:
+                logger.info(f"Empty content in conversation {conversation_id}")
+            await chatwoot_svc.send_message(
+                conversation_id,
+                "Por ahora solo puedo leer mensajes de texto. 😊 ¿Podrías describir tu consulta con palabras?",
+            )
+            return {"status": "non-text ignored"}
+
+        # Ignore non-text content_type
+        content_type = body.get("content_type", "text")
+        if content_type != "text":
+            logger.info(f"Ignoring non-text content_type: {content_type}")
+            await chatwoot_svc.send_message(
+                conversation_id,
+                "Por ahora solo puedo leer mensajes de texto. 😊 ¿Podrías describir tu consulta con palabras?",
+            )
+            return {"status": "non-text ignored"}
+
+        # Get the customer's phone number for repair lookups
+        # First try source_id from contact_inbox (WhatsApp number)
+        phone = None
+        contact_inbox = conversation.get("contact_inbox", {})
+        source_id = contact_inbox.get("source_id")
+        if source_id:
+            phone = source_id
+            logger.info(f"Phone from source_id: {phone}")
+
+        # Fallback: fetch phone from Chatwoot Contacts API
+        if not phone and contact_id:
+            phone = await chatwoot_svc.get_contact_phone(contact_id)
+            logger.info(f"Phone from Contacts API: {phone}")
+
+        # Use conversation_id as the "sender" key for chat history
+        sender_key = f"chatwoot_{conversation_id}"
+
+        # Per-phone rate limiting
+        recent = await db.count_recent_messages(sender_key, seconds=PHONE_RATE_WINDOW)
+        if recent >= PHONE_RATE_LIMIT:
+            logger.warning(f"Rate limit exceeded for conversation {conversation_id} ({recent} msgs in {PHONE_RATE_WINDOW}s)")
+            await chatwoot_svc.send_message(
+                conversation_id,
+                "Estás enviando mensajes muy rápido. Por favor espera un momento antes de continuar.",
+            )
+            return {"status": "phone_rate_limited"}
+
+        # Check conversation mode (bot or human)
+        mode = await db.get_conversation_mode(sender_key)
+
+        if mode == "human":
+            await db.save_message(sender_key, "user", content)
+            logger.info(f"Message saved for human agent (conversation: {conversation_id})")
+            return {"status": "human mode"}
+
+        # Get conversation history
+        history = await db.get_history(sender_key, limit=10)
+
+        # Create Odoo lead on first message (no prior history)
+        if not history:
+            sender_name = sender.get("name", "")
+            sender_email = sender.get("email", "")
+            if not phone:
+                phone = sender.get("phone_number", "")
+            lead_label = sender_name or phone or f"Conversación {conversation_id}"
+            try:
+                await odoo_svc.create_lead(
+                    name=f"WhatsApp - {lead_label}",
+                    contact_name=sender_name,
+                    phone=phone or "",
+                    email=sender_email,
+                    description=content,
+                )
+            except Exception as e:
+                logger.error(f"Error creating Odoo lead: {e}", exc_info=True)
+
+        # Save user message
+        await db.save_message(sender_key, "user", content)
+
+        # Classify intent (cheap gpt-4o-mini call)
+        intent = await classify_intent(
+            client=openai_svc.client,
+            user_message=content,
+            history=history,
+        )
+        logger.info(f"Intent for conversation {conversation_id}: {intent}")
+
+        # Handoff to human agent if requested
+        if intent.needs_human:
+            if is_within_business_hours():
+                await db.save_message(sender_key, "assistant", HANDOFF_MESSAGE)
+                await chatwoot_svc.send_message(conversation_id, HANDOFF_MESSAGE)
+                await _handle_handoff(sender_key, conversation_id=conversation_id)
+                return {"status": "handoff"}
+            else:
+                msg = get_outside_hours_message()
+                await db.save_message(sender_key, "assistant", msg)
+                await chatwoot_svc.send_message(conversation_id, msg)
+                logger.info(f"Handoff denied for conversation {conversation_id} — outside business hours")
+                return {"status": "outside_hours"}
+
+        # Fetch only what's needed based on classification
+        extra_context_parts = []
+
+        needs_repair = intent.needs_repair_lookup
+        if needs_repair and phone:
+            repair_ctx = await _repair_lookup(phone, content)
+            if repair_ctx:
+                extra_context_parts.append(repair_ctx)
+
+        if intent.needs_prices:
+            try:
+                prices = await sheets_svc.get_all_prices()
+                if prices:
+                    extra_context_parts.append(sheets_svc.format_prices_for_prompt(prices))
+            except Exception as e:
+                logger.error(f"Error fetching prices: {e}", exc_info=True)
+
+        if intent.wants_appointment:
+            extra_context_parts.append(calendar_svc.get_appointment_context())
+
+        extra_context = "\n\n".join(extra_context_parts) if extra_context_parts else None
+
+        # Load brand-specific FAQ if classified
+        brand_faq = None
+        if intent.brand:
+            brand_faq = load_brand_faq(intent.brand)
+
+        # Generate AI response
+        ai_response = await openai_svc.generate_response(
+            user_message=content,
+            history=history,
+            extra_context=extra_context,
+            brand_faq=brand_faq,
+        )
+
+        # Check if AI wants to transfer to agent (product purchase)
+        if "TRANSFERIR_AGENTE" in ai_response:
+            clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
+            handoff_msg = HANDOFF_MESSAGE if is_within_business_hours() else get_outside_hours_message()
+            full_msg = f"{clean_response}\n\n{handoff_msg}" if clean_response else handoff_msg
+            await db.save_message(sender_key, "assistant", full_msg)
+            await chatwoot_svc.send_message(conversation_id, full_msg)
+            if is_within_business_hours():
+                await _handle_handoff(sender_key, conversation_id=conversation_id)
+            return {"status": "handoff"}
+
+        # Check if AI confirmed an appointment or pickup
+        clean_response = ai_response
+        if "CONFIRMAR_CITA|" in ai_response or "CONFIRMAR_ENVIO|" in ai_response:
+            clean_response, ai_response = await _process_appointment(
+                ai_response, phone or sender_key
+            )
+
+        # Save bot response
+        await db.save_message(sender_key, "assistant", clean_response)
+
+        # Send response via Chatwoot
+        await chatwoot_svc.send_message(conversation_id, clean_response)
+
+        logger.info(f"Response sent to conversation {conversation_id}: {clean_response[:100]}...")
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.error(f"Error processing Chatwoot webhook: {e}", exc_info=True)
+        return {"status": "error"}
