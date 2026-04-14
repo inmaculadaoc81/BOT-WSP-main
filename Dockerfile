@@ -13,10 +13,10 @@ COPY *.py .
 COPY faq/ faq/
 
 # Copy credentials
-COPY credentials/ credentials/
+# COPY credentials/ credentials/
 
 # Create data directory for SQLite
-RUN mkdir -p data
+RUN mkdir -p data1
 
 # Expose port
 EXPOSE 8000
