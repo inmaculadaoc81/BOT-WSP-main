@@ -221,6 +221,7 @@ async def receive_message(request: Request):
             extra_context=extra_context,
             brand_faq=brand_faq,
         )
+        logger.info("RAW AI RESPONSE (WhatsApp):\n%s", ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:
@@ -234,11 +235,13 @@ async def receive_message(request: Request):
             return {"status": "handoff"}
 
         # Check if AI confirmed an appointment or pickup
-        clean_response, _ = await process_ai_calendar_command(
+        clean_response, created_event = await process_ai_calendar_command(
             calendar_service=calendar_svc,
             ai_response=ai_response,
             attendee_phone=sender,
         )
+        logger.info("CLEAN RESPONSE (WhatsApp):\n%s", clean_response)
+        logger.info("CREATED EVENT (WhatsApp): %s", created_event)
 
         # Save bot response
         await db.save_message(sender, "assistant", clean_response)
@@ -662,6 +665,7 @@ async def chatwoot_webhook(request: Request):
             extra_context=extra_context,
             brand_faq=brand_faq,
         )
+        logger.info("RAW AI RESPONSE (Chatwoot):\n%s", ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:
@@ -675,11 +679,13 @@ async def chatwoot_webhook(request: Request):
             return {"status": "handoff"}
 
         # Check if AI confirmed an appointment or pickup
-        clean_response, _ = await process_ai_calendar_command(
+        clean_response, created_event = await process_ai_calendar_command(
             calendar_service=calendar_svc,
             ai_response=ai_response,
             attendee_phone=phone or sender_key,
         )
+        logger.info("CLEAN RESPONSE (Chatwoot):\n%s", clean_response)
+        logger.info("CREATED EVENT (Chatwoot): %s", created_event)
 
         # Save bot response
         await db.save_message(sender_key, "assistant", clean_response)
