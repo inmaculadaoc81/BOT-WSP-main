@@ -541,28 +541,15 @@ async def chatwoot_webhook(request: Request):
 
             return {"status": "ignored"}
 
-               # Normalize Chatwoot payloads:
-        # - some setups send top-level message_created/message_type=incoming
-        # - others send conversation_updated with the new message inside messages[0]
-        message_payload = None
-
-        if event == "message_created":
-            message_payload = body
-        elif event == "conversation_updated":
-            messages = body.get("messages", [])
-            if messages:
-                latest = messages[0]
-                # incoming customer message in Chatwoot payloads is usually message_type 0
-                if latest.get("sender_type") == "Contact" and latest.get("message_type") == 0:
-                    message_payload = latest
-
-        # Agent sent a message → activate human mode so bot doesn't interfere
-        if not message_payload:
+        # Only process incoming messages (from the customer)
+        if event != "message_created" or message_type != "incoming":
+            # Agent sent a message → activate human mode so bot doesn't interfere
+            # But ignore messages from the bot itself (sender type "agent_bot")
             if event == "message_created" and message_type == "outgoing":
                 sender_info = body.get("sender", {})
                 sender_type = sender_info.get("type", "")
                 if sender_type == "agent_bot":
-                    logger.info("Ignoring bot's own outgoing message")
+                    logger.info(f"Ignoring bot's own outgoing message")
                     return {"status": "bot_echo_ignored"}
 
                 conversation = body.get("conversation", {})
@@ -571,6 +558,7 @@ async def chatwoot_webhook(request: Request):
                     sender_key = f"chatwoot_{conv_id}"
                     await db.set_conversation_mode(sender_key, "human")
 
+                    # Also set by phone so WhatsApp webhook respects it
                     contact_inbox = conversation.get("contact_inbox", {})
                     source_id = contact_inbox.get("source_id")
                     if source_id:
@@ -582,11 +570,11 @@ async def chatwoot_webhook(request: Request):
             logger.info(f"Ignoring Chatwoot event: {event}, type: {message_type}")
             return {"status": "ignored"}
 
-        # Extract normalized data
-        content = message_payload.get("content", "")
+        # Extract data from Chatwoot payload
+        content = body.get("content", "")
         conversation = body.get("conversation", {})
-        conversation_id = conversation.get("id") or body.get("id")
-        sender = message_payload.get("sender", {}) or body.get("sender", {})
+        conversation_id = conversation.get("id")
+        sender = body.get("sender", {})
         contact_id = sender.get("id")
 
         if not conversation_id:
