@@ -27,7 +27,7 @@ from chatwoot_service import ChatwootService
 from odoo_service import OdooService
 from intent_classifier import classify_intent
 from faq_service import load_brand_faq
-from calendar_service import CalendarService
+from calendar_service import CalendarService, process_ai_calendar_command
 
 # Logging
 logging.basicConfig(
@@ -234,11 +234,11 @@ async def receive_message(request: Request):
             return {"status": "handoff"}
 
         # Check if AI confirmed an appointment or pickup
-        clean_response = ai_response
-        if "CONFIRMAR_CITA|" in ai_response or "CONFIRMAR_ENVIO|" in ai_response:
-            clean_response, ai_response = await _process_appointment(
-                ai_response, sender
-            )
+        clean_response, _ = await process_ai_calendar_command(
+            calendar_service=calendar_svc,
+            ai_response=ai_response,
+            attendee_phone=sender,
+        )
 
         # Save bot response
         await db.save_message(sender, "assistant", clean_response)
@@ -407,64 +407,6 @@ async def _repair_lookup(phone: str, message: str) -> str | None:
         "solo se pueden realizar desde el numero de movil registrado en el resguardo. "
         "Si necesita ayuda, puede llamar o acercarse a la tienda."
     )
-
-
-# ── Appointment helper ────────────────────────────────────────────────
-
-
-async def _process_appointment(ai_response: str, phone: str) -> tuple[str, str]:
-    """
-    Extract CONFIRMAR_CITA or CONFIRMAR_ENVIO line from AI response,
-    create the calendar event, and return (clean_response_for_user, original_response).
-    """
-    lines = ai_response.strip().split("\n")
-    confirm_line = None
-    other_lines = []
-
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("CONFIRMAR_CITA|") or stripped.startswith("CONFIRMAR_ENVIO|"):
-            confirm_line = stripped
-        else:
-            other_lines.append(line)
-
-    clean_response = "\n".join(other_lines).strip()
-
-    if confirm_line:
-        try:
-            parts = confirm_line.split("|")
-            is_envio = parts[0] == "CONFIRMAR_ENVIO"
-
-            start_iso = parts[1]
-            client_name = parts[2] if len(parts) > 2 else "Cliente"
-            reason = parts[3] if len(parts) > 3 else "Servicio técnico"
-            address = parts[4] if len(parts) > 4 else ""
-
-            if is_envio:
-                title = f"Envío: {client_name} - {reason}"
-                description = f"Cliente: {client_name}\nMotivo: {reason}\nDirección: {address}\nCoste envío: 15€"
-            else:
-                title = f"Cita: {client_name} - {reason}"
-                description = f"Cliente: {client_name}\nMotivo: {reason}"
-
-            event = await calendar_svc.create_event(
-                title=title,
-                start_iso=start_iso,
-                description=description,
-                attendee_phone=phone,
-            )
-
-            if event:
-                logger.info(f"{'Pickup' if is_envio else 'Appointment'} created for {phone}: {start_iso}")
-            else:
-                logger.error(f"Failed to create event for {phone}")
-                clean_response += "\n\n(Hubo un problema al registrar. Por favor contacta directamente con la tienda.)"
-
-        except Exception as e:
-            logger.error(f"Error processing confirmation: {e}", exc_info=True)
-            clean_response += "\n\n(Hubo un problema al registrar. Por favor contacta directamente con la tienda.)"
-
-    return clean_response, ai_response
 
 
 # ── Chatwoot Agent Bot webhook ──────────────────────────────────────────
@@ -733,11 +675,11 @@ async def chatwoot_webhook(request: Request):
             return {"status": "handoff"}
 
         # Check if AI confirmed an appointment or pickup
-        clean_response = ai_response
-        if "CONFIRMAR_CITA|" in ai_response or "CONFIRMAR_ENVIO|" in ai_response:
-            clean_response, ai_response = await _process_appointment(
-                ai_response, phone or sender_key
-            )
+        clean_response, _ = await process_ai_calendar_command(
+            calendar_service=calendar_svc,
+            ai_response=ai_response,
+            attendee_phone=phone or sender_key,
+        )
 
         # Save bot response
         await db.save_message(sender_key, "assistant", clean_response)
