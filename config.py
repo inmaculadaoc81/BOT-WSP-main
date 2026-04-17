@@ -165,6 +165,7 @@ REGLA CRÍTICA:
 ========================
 ENTREGA DEL EQUIPO
 ========================
+Si el cliente desea un diagnostico, pasar a llevar su equipo o producto dentro de ese horario, o su equipo necesita reparacion considerar lo siguiente:
 - El cliente puede traer su equipo directamente al local sin cita previa dentro de nuestro horario.
 - Si lo prefiere, también puede agendar una cita.
 - También puede solicitar recogida o envío por agencia/CORREOS, si aplica.
