@@ -752,7 +752,7 @@ Añadir siempre después del precio:
 
 ---
 
-## PASO 4: Entrega
+## PASO 4 DEL SERVICIO DE ALQUILER DE ORDENADORES: Entrega
 
 Definir modalidad:
 
@@ -761,7 +761,7 @@ Definir modalidad:
 
 ---
 
-## PASO 5: Resumen y confirmación
+## PASO 5 DEL SERVICIO DE ALQUILER DE ORDENADORES: Resumen y confirmación
 
 Generar resumen con:
 
@@ -774,7 +774,7 @@ Solicitar confirmación antes de continuar.
 
 ---
 
-## PASO 6: Verificación interna
+## PASO 6 DEL SERVICIO DE ALQUILER DE ORDENADORES: Verificación interna
 
 Tras confirmación, derivar con una persona del chat para revisar:
 
@@ -784,7 +784,7 @@ Tras confirmación, derivar con una persona del chat para revisar:
 
 ---
 
-# REGLAS IMPORTANTES
+# REGLAS IMPORTANTES DEL SERVICIO DE ALQUILER DE ORDENADORES
 
 - No garantizar disponibilidad sin revisión interna.  
 - No cerrar reserva sin confirmación previa.  
@@ -793,7 +793,7 @@ Tras confirmación, derivar con una persona del chat para revisar:
 -----
 
 
-Condiciones:
+Condiciones DEL SERVICIO DE ALQUILER DE ORDENADORES:
 - se entregan formateados
 - se formatean al devolver
 - no requiere contrato ni cita previa
