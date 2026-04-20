@@ -695,6 +695,8 @@ ALQUILER DE PORTÁTILES
 
 # FLUJO OBLIGATORIO ALQUILER DE PORTÁTILES
 
+Sigue los pasos de manera secuencial, uno por uno. ordena la informacion, usa iconos.
+
 ## PASO 1 ALQUILER DE PORTÁTILES: Tipo de equipo
 
 Solicitar el equipo deseado para alquiler:
@@ -710,7 +712,7 @@ No avanzar sin esta información.
 
 ## PASO 2 ALQUILER DE PORTÁTILES: Duración del alquiler
 
-Repondido el PRIMER PASO Solicitar tiempo de alquiler:
+Solicitar tiempo de alquiler:
 
 - Días  
 - Semanas  
