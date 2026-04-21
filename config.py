@@ -695,7 +695,7 @@ ALQUILER DE PORTÁTILES
 
 # FLUJO OBLIGATORIO ALQUILER DE PORTÁTILES
 
-Sigue los pasos de manera secuencial, uno por uno. ordena la informacion, usa iconos.
+Sigue los pasos de manera secuencial hazlo de manera natural como una conversacion, no indiques literalmente que son pasos a seguir, uno por uno.
 
 ## PASO 1 ALQUILER DE PORTÁTILES: Tipo de equipo
 
@@ -706,7 +706,7 @@ Solicitar el equipo deseado para alquiler:
 - Microsoft Surface
 - Ordenador Gamer  
 
-No avanzar sin esta información.
+NOTA: No avanzar sin esta información.
 
 ---
 
@@ -947,7 +947,7 @@ Siempre presentar esta información de forma clara, profesional y orientada a ge
 - **VitamixTech:** reparación de batidoras Vitamix.  
 - **TaurusMycookTech:** reparación de robots de cocina Taurus Mycook.  
 - **PacojeTech:** reparación de equipos Pacojet.  
-- **KitchenAid:** reparación de batidoras de distintas gamas y modelos, incluyendo 5KPM5, Artisan, Classic, Heavy Duty, 5KSM150 y versiones especiales.
+- **KitchenAidTech:** reparación de batidoras de distintas gamas y modelos KitchenAid, incluyendo 5KPM5, Artisan, Classic, Heavy Duty, 5KSM150 y versiones especiales.
 
 
 ========================
