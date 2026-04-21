@@ -9,7 +9,8 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-# Columns to extract for the AI prompt (safe, no sensitive data)
+# Columnas seguras que SE EXPONEN al modelo (sin datos sensibles de coste/proveedor).
+# Cualquier columna fuera de esta lista se ignora al formatear para el prompt.
 REPAIR_COLUMNS = [
     "resguardo",
     "fecha_recepcion",
@@ -17,16 +18,123 @@ REPAIR_COLUMNS = [
     "equipo_modelo",
     "sintoma",
     "estado",
-    "presupuesto_aceptado_id",
     "tecnico_asignado",
     "fecha_reparacion",
-    "resultado_reparacion",
+    "fecha_presupuesto",
+    "motivo_rechazo",
+    "fecha_aceptacion_presupuesto",
     "fecha_entrega",
+    "fecha_recogida",
     "estado_entrega",
+    "tiempo_entrega",
 ]
 
-# Delivery states that mean the client no longer has a pending repair
-CLOSED_DELIVERY_STATES = {"ENTREGADO", "RECICLAJE"}
+# Mapeo de cabeceras humanas (hoja "Consolidado") a nombres internos snake_case.
+# Se aceptan variantes con/sin tildes y con espacios alternativos.
+# Columnas NO mapeadas se ignoran silenciosamente (filtradas por REPAIR_COLUMNS).
+HEADER_ALIASES = {
+    # Identificadores básicos
+    "Resguardo de Recepcion": "resguardo",
+    "Resguardo de Recepción": "resguardo",
+    "Fecha": "fecha_recepcion",
+    "Fecha de Recepcion": "fecha_recepcion",
+    "Fecha de Recepción": "fecha_recepcion",
+
+    # Cliente
+    "Nombre de Cliente": "cliente_nombre",
+    "Nombre del Cliente": "cliente_nombre",
+    "Telefono": "cliente_telefono",
+    "Teléfono": "cliente_telefono",
+    "Correo electrónico": "cliente_correo",
+    "Correo electronico": "cliente_correo",
+
+    # Equipo
+    "Modelo/Marca Equipo": "equipo_modelo",
+    "Modelo / Marca Equipo": "equipo_modelo",
+    "Síntoma / Reparación": "sintoma",
+    "Sintoma / Reparacion": "sintoma",
+    " MODELO DYSON/THERMOMIX": "modelo_especifico",
+    "MODELO DYSON/THERMOMIX": "modelo_especifico",
+    "TIPO DE REPARACIÓN DYSON/THERMOMIX": "tipo_reparacion_marca",
+    "TIPO DE REPARACION DYSON/THERMOMIX": "tipo_reparacion_marca",
+
+    # Estado y seguimiento
+    "Estado": "estado",
+    "Estado de Pedido": "estado_pedido_interno",
+    "ESTADO DE RECOGIDA": "estado_entrega",
+    "Aviso Wasap Estado": "aviso_wasap",
+
+    # Presupuesto
+    "Responsable de presupuesto": "responsable_presupuesto",
+    "Fecha de Elaboración de Presupuesto": "fecha_presupuesto",
+    "Fecha de Elaboracion de Presupuesto": "fecha_presupuesto",
+    "Fecha Límite Presupuesto": "fecha_limite_presupuesto",
+    "Fecha Limite Presupuesto": "fecha_limite_presupuesto",
+    "Alerta envío de presupuesto": "alerta_presupuesto",
+    "Alerta envio de presupuesto": "alerta_presupuesto",
+    "Motivo Rechazo de Presupuesto": "motivo_rechazo",
+    "FECHA ACEPTACION DE PRESUPUESTO (FECHA DE PEDIDO)": "fecha_aceptacion_presupuesto",
+
+    # Reparación y entrega
+    "Técnico que ha reparado el equipo": "tecnico_asignado",
+    "Tecnico que ha reparado el equipo": "tecnico_asignado",
+    "Fecha de Reparación": "fecha_reparacion",
+    "Fecha de Reparacion": "fecha_reparacion",
+    "TIEMPO (DÍAS) DE ENTREGA DE EQUIPO": "tiempo_entrega",
+    "TIEMPO (DIAS) DE ENTREGA DE EQUIPO": "tiempo_entrega",
+    "FECHA DE ENTREGA": "fecha_entrega",
+    "FECHA DE RECOGIDA POR EL CLIENTE": "fecha_recogida",
+
+    # Internas / sensibles → mapeadas pero filtradas por REPAIR_COLUMNS
+    "Costo de Reparación sin IVA (No incluir precio de la pieza)": "costo_reparacion_interno",
+    "Costo de Reparacion sin IVA (No incluir precio de la pieza)": "costo_reparacion_interno",
+    "COSTO DE PIEZA": "costo_pieza_interno",
+    "Ganancia Neta": "ganancia_neta_interna",
+    "Responsable de Compra": "responsable_compra_interno",
+    "PROVEEDOR": "proveedor_interno",
+    "ENLACES DE COMPRA": "enlaces_compra_interno",
+    "NÚMERO DE PEDIDO DE COMPRA": "numero_pedido_interno",
+    "NUMERO DE PEDIDO DE COMPRA": "numero_pedido_interno",
+    "FECHA DE PEDIDO": "fecha_pedido_interno",
+    "CONTACTAR PROVEEDOR": "contactar_proveedor_interno",
+    "FECHA CONTACTO 1": "fecha_contacto_1_interno",
+    "RECORDATORIO P1": "recordatorio_p1_interno",
+    "NÚMERO DE FACTURA": "numero_factura_interno",
+    "NUMERO DE FACTURA": "numero_factura_interno",
+    "FICHA /MARCA": "ficha_marca_interna",
+    "FICHA/MARCA": "ficha_marca_interna",
+    "Colocó Reseña": "coloco_resena_interno",
+    "Coloco Reseña": "coloco_resena_interno",
+    "OBSERVACIONES": "observaciones_internas",
+    "Envío de Encuesta": "envio_encuesta_interno",
+    "Envio de Encuesta": "envio_encuesta_interno",
+    "Envío de enlace para reseña": "envio_enlace_resena_interno",
+    "Envio de enlace para reseña": "envio_enlace_resena_interno",
+    "Ingresó Reseña?": "ingreso_resena_interno",
+    "Ingreso Reseña?": "ingreso_resena_interno",
+    "Obs (Entrega de Equipos)": "obs_entrega_interno",
+}
+
+
+def _normalize_headers(record: dict) -> dict:
+    """Translate human headers to snake_case internal keys (HEADER_ALIASES).
+    Keys not in the map are kept as-is so existing sheets with snake_case keep working."""
+    normalized = {}
+    for key, value in record.items():
+        canonical = HEADER_ALIASES.get(key, key)
+        normalized[canonical] = value
+    return normalized
+
+
+# Estados que significan que la reparacion ya esta cerrada para el cliente.
+# Se comparan en mayusculas. Si algun dia se introducen estados nuevos de cierre,
+# anadirlos aqui.
+CLOSED_STATES = {
+    "ENTREGADO",
+    "RECICLAJE",
+    "REPARADO Y ENTREGADO",
+    "ANULADO",
+}
 
 
 def normalize_phone(phone: str) -> str:
@@ -60,9 +168,13 @@ def _extract_repair(record: dict) -> dict:
 
 
 def _is_active(repair: dict) -> bool:
-    """A repair is active if estado_entrega is not ENTREGADO or RECICLAJE."""
-    estado = repair.get("estado_entrega", "").upper().strip()
-    return estado not in CLOSED_DELIVERY_STATES
+    """A repair is active unless its delivery/estado indicates closure.
+    Si la hoja tiene estado_entrega, manda ese. Si no, caemos a `estado`."""
+    estado_entrega = (repair.get("estado_entrega") or "").upper().strip()
+    if estado_entrega:
+        return estado_entrega not in CLOSED_STATES
+    estado = (repair.get("estado") or "").upper().strip()
+    return estado not in CLOSED_STATES
 
 
 class SheetsService:
@@ -108,8 +220,9 @@ class SheetsService:
                 return []
 
         try:
-            sheet = self._client.open_by_key(settings.GOOGLE_SHEETS_ID).worksheet("Reparaciones")
-            records = sheet.get_all_records()
+            sheet = self._client.open_by_key(settings.GOOGLE_SHEETS_ID).worksheet("Consolidado")
+            raw_records = sheet.get_all_records()
+            records = [_normalize_headers(r) for r in raw_records]
             self._cache = records
             self._cache_time = time.time()
             logger.info(f"Fetched {len(records)} records from Google Sheets")
@@ -280,17 +393,25 @@ def _format_single_repair(r: dict) -> list[str]:
         f"Estado: {r.get('estado', 'N/A')}",
         f"Recibido: {r.get('fecha_recepcion', 'N/A')}",
     ]
-    if r.get("presupuesto_aceptado_id"):
-        lines.append(f"Presupuesto: {r['presupuesto_aceptado_id']}")
+    if r.get("fecha_presupuesto"):
+        lines.append(f"Presupuesto elaborado: {r['fecha_presupuesto']}")
+    if r.get("fecha_aceptacion_presupuesto"):
+        lines.append(f"Presupuesto aceptado: {r['fecha_aceptacion_presupuesto']}")
+    if r.get("motivo_rechazo"):
+        lines.append(f"Motivo rechazo presupuesto: {r['motivo_rechazo']}")
     if r.get("tecnico_asignado"):
         lines.append(f"Técnico asignado: {r['tecnico_asignado']}")
     if r.get("fecha_reparacion"):
         lines.append(f"Fecha reparación: {r['fecha_reparacion']}")
-    if r.get("resultado_reparacion"):
-        lines.append(f"Resultado: {r['resultado_reparacion']}")
+    if r.get("tiempo_entrega"):
+        lines.append(f"Tiempo estimado de entrega (días): {r['tiempo_entrega']}")
+    if r.get("fecha_entrega"):
+        lines.append(f"Fecha entrega al cliente: {r['fecha_entrega']}")
+    if r.get("fecha_recogida"):
+        lines.append(f"Fecha de recogida por el cliente: {r['fecha_recogida']}")
     if r.get("estado_entrega"):
         estado_e = r["estado_entrega"]
-        if estado_e == "ENVIO":
+        if estado_e.upper() == "ENVIO":
             lines.append("Estado entrega: EN CAMINO (enviado al cliente)")
         else:
             lines.append(f"Estado entrega: {estado_e}")
