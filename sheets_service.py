@@ -9,8 +9,9 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-# Columnas seguras que SE EXPONEN al modelo (sin datos sensibles de coste/proveedor).
-# Cualquier columna fuera de esta lista se ignora al formatear para el prompt.
+# Columnas seguras que SE EXPONEN al modelo (sin datos sensibles ni privados).
+# Cualquier columna fuera de esta lista se ignora al formatear el contexto.
+# Las cabeceras de la hoja deben coincidir exactamente con estos nombres.
 REPAIR_COLUMNS = [
     "resguardo",
     "fecha_recepcion",
@@ -18,102 +19,22 @@ REPAIR_COLUMNS = [
     "equipo_modelo",
     "sintoma",
     "estado",
+    "presupuesto_aceptado_id",
     "tecnico_asignado",
     "fecha_reparacion",
-    "fecha_presupuesto",
-    "motivo_rechazo",
-    "fecha_aceptacion_presupuesto",
+    "resultado_reparacion",
+    "motivo_sin_reparacion",
     "fecha_entrega",
-    "fecha_recogida",
     "estado_entrega",
-    "tiempo_entrega",
+    "tipo_recepcion",
+    "entrega_mensajeria",
 ]
 
-# Mapeo de cabeceras humanas (hoja "Consolidado") a nombres internos snake_case.
-# Se aceptan variantes con/sin tildes y con espacios alternativos.
-# Columnas NO mapeadas se ignoran silenciosamente (filtradas por REPAIR_COLUMNS).
-HEADER_ALIASES = {
-    # Identificadores básicos
-    "Resguardo de Recepcion": "resguardo",
-    "Resguardo de Recepción": "resguardo",
-    "Fecha": "fecha_recepcion",
-    "Fecha de Recepcion": "fecha_recepcion",
-    "Fecha de Recepción": "fecha_recepcion",
-
-    # Cliente
-    "Nombre de Cliente": "cliente_nombre",
-    "Nombre del Cliente": "cliente_nombre",
-    "Telefono": "cliente_telefono",
-    "Teléfono": "cliente_telefono",
-    "Correo electrónico": "cliente_correo",
-    "Correo electronico": "cliente_correo",
-
-    # Equipo
-    "Modelo/Marca Equipo": "equipo_modelo",
-    "Modelo / Marca Equipo": "equipo_modelo",
-    "Síntoma / Reparación": "sintoma",
-    "Sintoma / Reparacion": "sintoma",
-    " MODELO DYSON/THERMOMIX": "modelo_especifico",
-    "MODELO DYSON/THERMOMIX": "modelo_especifico",
-    "TIPO DE REPARACIÓN DYSON/THERMOMIX": "tipo_reparacion_marca",
-    "TIPO DE REPARACION DYSON/THERMOMIX": "tipo_reparacion_marca",
-
-    # Estado y seguimiento
-    "Estado": "estado",
-    "Estado de Pedido": "estado_pedido_interno",
-    "ESTADO DE RECOGIDA": "estado_entrega",
-    "Aviso Wasap Estado": "aviso_wasap",
-
-    # Presupuesto
-    "Responsable de presupuesto": "responsable_presupuesto",
-    "Fecha de Elaboración de Presupuesto": "fecha_presupuesto",
-    "Fecha de Elaboracion de Presupuesto": "fecha_presupuesto",
-    "Fecha Límite Presupuesto": "fecha_limite_presupuesto",
-    "Fecha Limite Presupuesto": "fecha_limite_presupuesto",
-    "Alerta envío de presupuesto": "alerta_presupuesto",
-    "Alerta envio de presupuesto": "alerta_presupuesto",
-    "Motivo Rechazo de Presupuesto": "motivo_rechazo",
-    "FECHA ACEPTACION DE PRESUPUESTO (FECHA DE PEDIDO)": "fecha_aceptacion_presupuesto",
-
-    # Reparación y entrega
-    "Técnico que ha reparado el equipo": "tecnico_asignado",
-    "Tecnico que ha reparado el equipo": "tecnico_asignado",
-    "Fecha de Reparación": "fecha_reparacion",
-    "Fecha de Reparacion": "fecha_reparacion",
-    "TIEMPO (DÍAS) DE ENTREGA DE EQUIPO": "tiempo_entrega",
-    "TIEMPO (DIAS) DE ENTREGA DE EQUIPO": "tiempo_entrega",
-    "FECHA DE ENTREGA": "fecha_entrega",
-    "FECHA DE RECOGIDA POR EL CLIENTE": "fecha_recogida",
-
-    # Internas / sensibles → mapeadas pero filtradas por REPAIR_COLUMNS
-    "Costo de Reparación sin IVA (No incluir precio de la pieza)": "costo_reparacion_interno",
-    "Costo de Reparacion sin IVA (No incluir precio de la pieza)": "costo_reparacion_interno",
-    "COSTO DE PIEZA": "costo_pieza_interno",
-    "Ganancia Neta": "ganancia_neta_interna",
-    "Responsable de Compra": "responsable_compra_interno",
-    "PROVEEDOR": "proveedor_interno",
-    "ENLACES DE COMPRA": "enlaces_compra_interno",
-    "NÚMERO DE PEDIDO DE COMPRA": "numero_pedido_interno",
-    "NUMERO DE PEDIDO DE COMPRA": "numero_pedido_interno",
-    "FECHA DE PEDIDO": "fecha_pedido_interno",
-    "CONTACTAR PROVEEDOR": "contactar_proveedor_interno",
-    "FECHA CONTACTO 1": "fecha_contacto_1_interno",
-    "RECORDATORIO P1": "recordatorio_p1_interno",
-    "NÚMERO DE FACTURA": "numero_factura_interno",
-    "NUMERO DE FACTURA": "numero_factura_interno",
-    "FICHA /MARCA": "ficha_marca_interna",
-    "FICHA/MARCA": "ficha_marca_interna",
-    "Colocó Reseña": "coloco_resena_interno",
-    "Coloco Reseña": "coloco_resena_interno",
-    "OBSERVACIONES": "observaciones_internas",
-    "Envío de Encuesta": "envio_encuesta_interno",
-    "Envio de Encuesta": "envio_encuesta_interno",
-    "Envío de enlace para reseña": "envio_enlace_resena_interno",
-    "Envio de enlace para reseña": "envio_enlace_resena_interno",
-    "Ingresó Reseña?": "ingreso_resena_interno",
-    "Ingreso Reseña?": "ingreso_resena_interno",
-    "Obs (Entrega de Equipos)": "obs_entrega_interno",
-}
+# Mapeo opcional de cabeceras "humanas" a los nombres internos snake_case.
+# La hoja actual usa directamente snake_case, por lo que esta tabla queda
+# vacia. Si en el futuro alguien cambia las cabeceras a formato "amigable",
+# añadir aqui el mapeo (p. ej. "Nombre de Cliente" → "cliente_nombre").
+HEADER_ALIASES: dict[str, str] = {}
 
 
 def _normalize_headers(record: dict) -> dict:
@@ -220,7 +141,7 @@ class SheetsService:
                 return []
 
         try:
-            sheet = self._client.open_by_key(settings.GOOGLE_SHEETS_ID).worksheet("Consolidado")
+            sheet = self._client.open_by_key(settings.GOOGLE_SHEETS_ID).worksheet("Reparaciones")
             raw_records = sheet.get_all_records()
             records = [_normalize_headers(r) for r in raw_records]
             self._cache = records
@@ -394,26 +315,26 @@ def _format_single_repair(r: dict) -> list[str]:
         f"Estado: {r.get('estado', 'N/A')}",
         f"Recibido: {r.get('fecha_recepcion', 'N/A')}",
     ]
-    if r.get("fecha_presupuesto"):
-        lines.append(f"Presupuesto elaborado: {r['fecha_presupuesto']}")
-    if r.get("fecha_aceptacion_presupuesto"):
-        lines.append(f"Presupuesto aceptado: {r['fecha_aceptacion_presupuesto']}")
-    if r.get("motivo_rechazo"):
-        lines.append(f"Motivo rechazo presupuesto: {r['motivo_rechazo']}")
+    if r.get("presupuesto_aceptado_id"):
+        lines.append(f"Presupuesto aceptado: {r['presupuesto_aceptado_id']}")
     if r.get("tecnico_asignado"):
         lines.append(f"Técnico asignado: {r['tecnico_asignado']}")
     if r.get("fecha_reparacion"):
         lines.append(f"Fecha reparación: {r['fecha_reparacion']}")
-    if r.get("tiempo_entrega"):
-        lines.append(f"Tiempo estimado de entrega (días): {r['tiempo_entrega']}")
+    if r.get("resultado_reparacion"):
+        lines.append(f"Resultado: {r['resultado_reparacion']}")
+    if r.get("motivo_sin_reparacion"):
+        lines.append(f"Motivo sin reparación: {r['motivo_sin_reparacion']}")
     if r.get("fecha_entrega"):
-        lines.append(f"Fecha entrega al cliente: {r['fecha_entrega']}")
-    if r.get("fecha_recogida"):
-        lines.append(f"Fecha de recogida por el cliente: {r['fecha_recogida']}")
+        lines.append(f"Fecha entrega: {r['fecha_entrega']}")
     if r.get("estado_entrega"):
         estado_e = r["estado_entrega"]
         if estado_e.upper() == "ENVIO":
             lines.append("Estado entrega: EN CAMINO (enviado al cliente)")
         else:
             lines.append(f"Estado entrega: {estado_e}")
+    if r.get("tipo_recepcion"):
+        lines.append(f"Tipo recepción: {r['tipo_recepcion']}")
+    if r.get("entrega_mensajeria"):
+        lines.append(f"Entrega por mensajería: {r['entrega_mensajeria']}")
     return lines
