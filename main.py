@@ -383,60 +383,53 @@ _RESGUARDO_RE = re.compile(r"\b(\d{4,6})\b")
 
 
 async def _repair_lookup(phone: str, message: str) -> str | None:
-    """
-    Try to find repair data for the user.
-    1. Search by sender's phone number → show all repairs.
-    2. If a specific resguardo is mentioned, look it up (must belong to sender).
-    3. If nothing found, return security message.
-    Returns formatted context string, or None.
-    """
-    # Step 1: Search by sender phone
-    try:
-        repairs = await sheets_svc.get_repairs_by_phone(phone)
-        if repairs:
-            logger.info(f"Found {len(repairs)} repairs by phone for {phone}")
-            # If user mentioned a specific resguardo, also look it up
-            match = _RESGUARDO_RE.search(message)
-            if match:
-                resguardo = match.group(1)
-                try:
-                    repair = await sheets_svc.get_repair_by_resguardo(resguardo, phone)
-                    if repair:
-                        return sheets_svc.format_repairs_for_prompt([repair])
-                except Exception as e:
-                    logger.error(f"Error fetching resguardo {resguardo}: {e}", exc_info=True)
-            return sheets_svc.format_repairs_for_prompt(repairs)
-    except Exception as e:
-        logger.error(f"Error fetching repairs by phone: {e}", exc_info=True)
+    """Try to find repair data for the user.
 
-    # Step 2: Look for resguardo in message (user has no repairs by phone)
+    Prioridad:
+    1. Si el mensaje contiene un numero de resguardo (4-6 digitos), buscar
+       por ese resguardo sin validar el telefono. Es el flujo principal:
+       el cliente da su resguardo y el bot le dice el estado.
+    2. Si no hay resguardo en el mensaje, intentar buscar por el telefono
+       del remitente por si coincide (atajo opcional).
+    3. Si no hay nada, pedir amablemente el resguardo.
+    """
+    # Step 1: resguardo directly in message → lookup without phone check
     match = _RESGUARDO_RE.search(message)
     if match:
         resguardo = match.group(1)
         try:
-            repair = await sheets_svc.get_repair_by_resguardo(resguardo, phone)
+            repair = await sheets_svc.get_repair_by_resguardo(resguardo)
             if repair:
-                logger.info(f"Found repair by resguardo {resguardo} for {phone}")
+                logger.info(f"Found repair by resguardo {resguardo}")
                 return sheets_svc.format_repairs_for_prompt([repair])
             else:
-                logger.info(f"Resguardo {resguardo} not found or doesn't belong to {phone}")
+                logger.info(f"Resguardo {resguardo} not found in sheet")
                 return (
                     "[RESULTADO BUSQUEDA RESGUARDO]\n"
-                    f"El resguardo {resguardo} no esta asociado al numero del cliente.\n"
-                    "INSTRUCCIONES: Informa al cliente que por seguridad, las consultas de estado "
-                    "solo se pueden realizar desde el numero de movil registrado en el resguardo. "
-                    "Si necesita ayuda, puede llamar o acercarse a la tienda."
+                    f"No se encontro ningun resguardo con el numero {resguardo}.\n"
+                    "INSTRUCCIONES: Informa al cliente amablemente que no se encuentra "
+                    "ese numero de resguardo y pidele que lo revise y lo vuelva a enviar. "
+                    "Si insiste en que es correcto, ofrece transferirlo con un compañero."
                 )
         except Exception as e:
             logger.error(f"Error fetching resguardo {resguardo}: {e}", exc_info=True)
 
-    # Step 3: No repairs found at all
+    # Step 2: try by sender phone as a shortcut (in case registered from same number)
+    try:
+        repairs = await sheets_svc.get_repairs_by_phone(phone)
+        if repairs:
+            logger.info(f"Found {len(repairs)} repairs by phone for {phone}")
+            return sheets_svc.format_repairs_for_prompt(repairs)
+    except Exception as e:
+        logger.error(f"Error fetching repairs by phone: {e}", exc_info=True)
+
+    # Step 3: nothing found → ask for resguardo
     return (
         "[RESULTADO BUSQUEDA REPARACIONES]\n"
-        "No se encontraron reparaciones asociadas al numero de telefono del cliente.\n"
-        "INSTRUCCIONES: Informa al cliente que por seguridad, las consultas de estado "
-        "solo se pueden realizar desde el numero de movil registrado en el resguardo. "
-        "Si necesita ayuda, puede llamar o acercarse a la tienda."
+        "No se encontraron reparaciones para este cliente.\n"
+        "INSTRUCCIONES: Pide al cliente su numero de resguardo (son 4 a 6 digitos "
+        "que aparecen en el papel/correo que recibio al dejar el equipo) para poder "
+        "buscar el estado."
     )
 
 

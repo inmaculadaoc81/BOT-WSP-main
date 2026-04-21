@@ -247,23 +247,24 @@ class SheetsService:
         logger.info(f"Found {len(matches)} repairs for phone {phone}")
         return matches
 
-    async def get_repair_by_resguardo(self, resguardo: str, phone: str) -> dict | None:
-        """
-        Get a specific repair by resguardo number.
-        Returns the repair only if it belongs to the given phone number.
-        Returns None if not found or phone doesn't match.
+    async def get_repair_by_resguardo(self, resguardo: str, phone: str | None = None) -> dict | None:
+        """Get a specific repair by resguardo number.
+
+        Si `phone` es None, no se valida la propiedad del resguardo y se
+        devuelve la reparacion tal cual. Si `phone` se pasa, se exige que el
+        telefono coincida (modo seguro legado).
         """
         records = await self._fetch_all_records()
         resguardo_clean = resguardo.strip()
 
         for record in records:
             if str(record.get("resguardo", "")).strip() == resguardo_clean:
+                if phone is None:
+                    return _extract_repair(record)
                 record_phone = str(record.get("cliente_telefono", ""))
                 if record_phone and phones_match(record_phone, phone):
                     return _extract_repair(record)
-                else:
-                    # Resguardo exists but belongs to another client
-                    return None
+                return None
 
         return None
 
