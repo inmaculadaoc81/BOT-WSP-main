@@ -46,6 +46,30 @@ odoo_svc = OdooService()
 calendar_svc = CalendarService()
 
 
+# Marcadores del flujo de cita/recogida que aparecen en el último mensaje del bot
+# cuando está pidiendo al cliente que confirme el resumen antes de registrar.
+APPOINTMENT_FLOW_MARKERS = (
+    "Resumen de tu cita",
+    "Resumen de tu recogida",
+    "¿Es correcto?",
+)
+
+
+def _is_in_appointment_flow(history: list[dict]) -> bool:
+    """True si el último mensaje del bot pidió confirmación de cita/recogida.
+
+    Sirve para rescatar turnos donde el cliente responde solo 'si' y el
+    clasificador no detecta wants_appointment por falta de contexto.
+    """
+    if not history:
+        return False
+    for msg in reversed(history):
+        if msg.get("role") == "assistant":
+            content = msg.get("content", "") or ""
+            return any(m in content for m in APPOINTMENT_FLOW_MARKERS)
+    return False
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
@@ -203,6 +227,10 @@ async def receive_message(request: Request):
                     extra_context_parts.append(sheets_svc.format_prices_for_prompt(prices))
             except Exception as e:
                 logger.error(f"Error fetching prices: {e}", exc_info=True)
+
+        if not intent.wants_appointment and _is_in_appointment_flow(history):
+            intent.wants_appointment = True
+            logger.info("Forced wants_appointment=True (active appointment flow detected in history)")
 
         if intent.wants_appointment:
             extra_context_parts.append(calendar_svc.get_appointment_context())
@@ -647,6 +675,10 @@ async def chatwoot_webhook(request: Request):
                     extra_context_parts.append(sheets_svc.format_prices_for_prompt(prices))
             except Exception as e:
                 logger.error(f"Error fetching prices: {e}", exc_info=True)
+
+        if not intent.wants_appointment and _is_in_appointment_flow(history):
+            intent.wants_appointment = True
+            logger.info("Forced wants_appointment=True (active appointment flow detected in history)")
 
         if intent.wants_appointment:
             extra_context_parts.append(calendar_svc.get_appointment_context())
