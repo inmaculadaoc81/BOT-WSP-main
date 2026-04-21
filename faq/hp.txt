@@ -1,8 +1,16 @@
 [FAQ HP]
 
-- Tenemos algunos repuestos en tienda, otros se deben pedir. Necesitamos el número de parte del repuesto para localizarlo.
-- NO reparamos ni asesoramos sobre impresoras.
-- Pantallazos azules: pueden tener muchas causas. Traer el equipo, revisión gratuita y presupuesto.
-- Cable Flex de pantalla: traer equipo para presupuesto gratuito, lunes a viernes 10am-6pm.
-- Error de batería (601, 3F0): traer equipo, presupuesto gratuito en 24-48 horas.
-- HP todo-en-uno con pantalla distorsionada: posible daño interno en pantalla. Diagnóstico gratuito 24-48h, posible sustitución de pantalla.
+SERVICIOS HP:
+- NO reparamos ni asesoramos sobre impresoras HP.
+- Algunos repuestos HP están en tienda; otros se piden bajo demanda.
+- Para localizar un repuesto suele hacer falta el número de parte exacto.
+
+PANTALLAZOS AZULES (BSOD):
+- Pueden tener muchas causas. Pedir que traiga el equipo para revisión gratuita y presupuesto. No dar presupuesto exacto sin revisión.
+
+DIAGNÓSTICO HP:
+- Gratuito para ordenadores y portátiles (sin cita previa, dejando equipo).
+
+REGLAS:
+- Nunca dar presupuesto exacto de HP sin revisión en tienda.
+- Si preguntan por un repuesto sin número de parte, pedirlo o transferir a un compañero.

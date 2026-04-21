@@ -1,9 +1,29 @@
 import logging
 import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from openai import AsyncOpenAI
 
 from config import settings
 from faq_service import load_general_faq
+
+_MADRID_TZ = ZoneInfo("Europe/Madrid")
+_DIAS_SEMANA = [
+    "lunes", "martes", "miércoles", "jueves",
+    "viernes", "sábado", "domingo",
+]
+_MESES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+
+
+def _now_madrid() -> tuple[str, str]:
+    now = datetime.now(_MADRID_TZ)
+    fecha = f"{_DIAS_SEMANA[now.weekday()]} {now.day} de {_MESES[now.month - 1]} de {now.year}"
+    hora = now.strftime("%H:%M")
+    return fecha, hora
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +83,10 @@ class OpenAIService:
         """
         try:
             # Build messages array with system prompt + FAQ + history + new message
-            system_content = settings.SYSTEM_PROMPT
+            fecha_actual, hora_actual = _now_madrid()
+            system_content = settings.SYSTEM_PROMPT.replace(
+                "{fecha_actual}", fecha_actual
+            ).replace("{hora_actual}", hora_actual)
             if self._general_faq:
                 system_content += "\n\n" + self._general_faq
             if brand_faq:

@@ -1,15 +1,27 @@
 [FAQ THERMOMIX]
 
-MODELOS QUE REPARAMOS: Thermomix TM21, TM31, TM5, TM6. Otros modelos NO reparamos.
-- TM3300: NO reparamos, ya no hay repuestos.
-- No somos la casa Vorwerk, somos servicio técnico especializado.
-- Reparamos con piezas originales, excepto para TM21 y TM31.
-- NO reparamos motores ni ofrecemos repuestos para motores.
-- Podemos recoger la Thermomix a domicilio.
+MODELOS QUE SÍ REPARAMOS:
+- TM21
+- TM31
+- TM5
+- TM6
 
-PREGUNTAS FRECUENTES:
-- TM31 con error: revisión/diagnóstico gratuito para determinar el problema.
-- TM21 que no para de pitar: revisión gratuita para determinar el problema.
-- Derramando líquido: posible problema de cuchilla, traer para revisar.
+NO reparamos otros modelos (incluido TM3300 y posteriores fuera de la lista).
+- No somos Vorwerk; somos servicio técnico independiente especializado.
+- NO reparamos motores ni vendemos motor como repuesto.
 
-NOTA: Para precios de reparaciones Thermomix, consultar la tabla de precios del sistema.
+DIAGNÓSTICO THERMOMIX:
+- Gratuito.
+
+CASOS Y PRECIOS PERMITIDOS:
+- TM31 panel compatible: 85€ + IVA, posible mismo día.
+- TM5 error C142 o C145 (sistema de cierre): 199€ + IVA, posible mismo día.
+- TM21 no para de pitar: posible solenoide, 130€ + IVA, requiere revisión previa.
+- Derramamiento de líquido: posible daño de cuchilla, requiere revisión.
+
+RECOGIDA A DOMICILIO:
+- Thermomix sí entra en recogida a domicilio (15€ por equipo, solo península).
+
+REGLAS:
+- No inventar precios para otros fallos o modelos.
+- Si no es un caso listado, pedir traer el equipo para revisión o transferir.

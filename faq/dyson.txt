@@ -1,18 +1,26 @@
-[FAQ DYSON - DysonTech]
+[FAQ DYSON]
 
-PRODUCTOS DYSON QUE REPARAMOS:
-1. ASPIRADORAS DE MANO: V12 Detect Slim, V15 Detect, Gen5 Detect, V10 (Cyclone V10), V8 Absolute, V7, Omni-glide, PencilVac
-2. ASPIRADORAS DE SUELO: WashG1, 360 Eye, 360 Heurist, 360 Vis Nav, Upright & Cylinder
-3. SECADORES DE PELO: Supersonic, Supersonic Nural, Supersonic Professional, Supersonic R Series
-4. VENTILADORES: Air Multiplier, Pure Cool (TP07, TP10), Hot+Cool
-5. PURIFICADORES: Purifier Cool, Purifier Hot+Cool, Purifier Big+Quiet Formaldehyde
-6. HUMIDIFICADORES: Purifier Humidify+Cool, Humidify+Cool Formaldehyde
-7. LÍNEA PROFESIONAL: Supersonic Pro, Airwrap, Airwrap i.d. Pro, Airstrait Pro
+DIAGNÓSTICO DYSON:
+- Diagnóstico gratuito.
 
-PREGUNTAS FRECUENTES:
-- Secador se apaga después de un rato: problema de mantenimiento y obstrucción en entradas de aire. Se necesita desarmar y limpiar.
-- Aspirador funciona intermitentemente: filtros desgastados, necesitan cambio.
-- Dyson V7 luz roja y azul intermitente: revisión y presupuesto gratuitos.
-- Secador/moldeador con luz roja: dejar equipo 24-48h, diagnóstico gratuito.
+MODELOS/CATEGORÍAS: responder solo sobre los que estén confirmados como reparables.
+- Dyson 360eye: NO se repara.
+- Baterías y motores: usar solo precios expresamente listados abajo. Si no está listado, indicar que debe consultarse (traer equipo o transferir a un compañero).
 
-NOTA: Para precios de reparaciones Dyson, consultar la tabla de precios del sistema.
+CASOS Y PRECIOS PERMITIDOS:
+- Secador que se apaga (mantenimiento/obstrucción): 50€ + IVA, aprox 24h.
+- Gatillo Dyson: 100€ + IVA.
+- V10 / V11 gatillo: 100€ + IVA, aprox 2h.
+- Dyson V7 con luces roja/azul intermitentes: posible batería. Diagnóstico gratuito, pedir que traiga también el cargador.
+
+CABLES DE SECADORES DYSON:
+- HD compatible: 85€ + IVA.
+- HS compatible: 95€ + IVA.
+- Original HD/HS: 168€ + IVA, plazo 4 a 9 semanas.
+
+RECOGIDA A DOMICILIO:
+- Dyson sí entra en recogida a domicilio (15€ por equipo, solo península).
+
+REGLAS:
+- No inventar precios de otros modelos o piezas.
+- Si el cliente pregunta por un modelo/caso no listado, pedir traer el equipo para revisión o transferir.
