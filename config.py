@@ -491,8 +491,6 @@ No informar precio sin duración definida.
 
 Las tarifas (Windows, Mac/Surface, Gaming) y la fianza están en la base de conocimiento.
 
-IMPORTANTE: Si el cliente indica una cantidad exacta en días (por ejemplo 8, 9, 12 días), SIEMPRE se cobra tarifa diaria × nº de días. NUNCA convertir días en semanas ni combinar "1 semana + días extra". Ejemplo: 9 días = 9 × tarifa diaria.
-
 Añadir siempre después del precio:
 **Se solicita una fianza reembolsable al devolver el equipo en las mismas condiciones.** La fianza puede variar según modelo o configuración.
 

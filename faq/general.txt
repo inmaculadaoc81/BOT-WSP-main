@@ -104,7 +104,9 @@ ALQUILER DE PORTÁTILES (tarifas):
 - Modalidades: recogida en tienda o envío 15€ por equipo (solo península).
 - Los equipos se entregan formateados y se formatean al devolver.
 - No requiere contrato ni cita previa.
-- IMPORTANTE: si el cliente indica días exactos (ej. 9 días), cobrar SIEMPRE tarifa diaria × nº días. Nunca combinar semana + días extra.
+- IMPORTANTE: Siempre se deben de respetar los precios establecidos por semana, mes de acuerdo a lo establecido.
+- Si el cliente indica días exactos (ej. 9 días), cobrar SIEMPRE tarifa diaria × nº días. Nunca combinar semana + días extra.
+- Si el cliente indica ej. 30 días o 7 dias, cobrar SIEMPRE tarifa por mes o por semana, segun sea el caso.
 
 RECICLAJE:
 - Reciclaje de equipos electrónicos: gratuito. Aceptan laptops, ordenadores, impresoras y otros aparatos electrónicos.
