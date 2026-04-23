@@ -618,9 +618,14 @@ async def chatwoot_webhook(request: Request):
         # diferido de la conversacion completa hacia EspoCRM.
         last_msg_time = await db.get_last_message_time(sender_key)
         now_utc = datetime.now(timezone.utc)
+        gap = (now_utc - last_msg_time).total_seconds() if last_msg_time else None
         is_new_session = last_msg_time is None or (
-            (now_utc - last_msg_time).total_seconds()
-            > settings.ESPOCRM_NEW_LEAD_AFTER_SECONDS
+            gap is not None and gap > settings.ESPOCRM_NEW_LEAD_AFTER_SECONDS
+        )
+        logger.info(
+            f"EspoCRM check for {sender_key}: last_msg={last_msg_time}, "
+            f"gap={gap}s, threshold={settings.ESPOCRM_NEW_LEAD_AFTER_SECONDS}s, "
+            f"is_new_session={is_new_session}"
         )
         if is_new_session:
             sender_name = sender.get("name", "")

@@ -15,6 +15,10 @@ class EspoCRMService:
         self.url = settings.ESPOCRM_URL.rstrip("/")
         self.api_key = settings.ESPOCRM_API_KEY
         self.entity = settings.ESPOCRM_ENTITY
+        # Retener referencias fuertes a tasks pendientes para que asyncio
+        # no las recolecte antes de que terminen (el event loop solo guarda
+        # referencias debiles).
+        self._pending_tasks: set[asyncio.Task] = set()
 
     async def create_lead(
         self,
@@ -82,9 +86,17 @@ class EspoCRMService:
 
         async def _run():
             try:
+                logger.info(
+                    f"EspoCRM scheduler armed for {sender_key} "
+                    f"(fires in {delay}s, session_started_at={session_started_at.isoformat()})"
+                )
                 await asyncio.sleep(delay)
+                logger.info(f"EspoCRM scheduler firing for {sender_key}")
                 history = await db.get_history_since(
                     sender_key, since=session_started_at, limit=1000
+                )
+                logger.info(
+                    f"EspoCRM scheduler: {len(history)} messages in session for {sender_key}"
                 )
                 transcript_lines = []
                 for msg in history:
@@ -107,4 +119,8 @@ class EspoCRMService:
                     exc_info=True,
                 )
 
-        return asyncio.create_task(_run())
+        task = asyncio.create_task(_run())
+        # Mantener referencia fuerte hasta que termine (evita GC temprano).
+        self._pending_tasks.add(task)
+        task.add_done_callback(self._pending_tasks.discard)
+        return task
