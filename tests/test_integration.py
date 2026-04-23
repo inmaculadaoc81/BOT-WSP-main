@@ -95,7 +95,7 @@ def _mock_external_services():
         patch("main.whatsapp_svc") as wa,
         patch("main.chatwoot_svc") as cw,
         patch("main.sheets_svc") as sh,
-        patch("main.odoo_svc") as odoo,
+        patch("main.espocrm_svc") as espo,
         patch("main.calendar_svc") as cal,
     ):
         wa.send_message = AsyncMock(return_value={"messages": [{"id": "msg1"}]})
@@ -111,7 +111,8 @@ def _mock_external_services():
         sh.format_repairs_for_prompt = MagicMock(return_value="[REPAIRS]")
         sh.format_prices_for_prompt = MagicMock(return_value="[PRICES]")
 
-        odoo.create_lead = AsyncMock(return_value=42)
+        espo.create_lead = AsyncMock(return_value="lead-42")
+        espo.schedule_lead_from_conversation = MagicMock()
 
         cal.get_appointment_context = MagicMock(return_value="[APPOINTMENT CONTEXT]")
         cal.create_event = AsyncMock(return_value={"id": "evt1"})
@@ -120,7 +121,7 @@ def _mock_external_services():
             "whatsapp": wa,
             "chatwoot": cw,
             "sheets": sh,
-            "odoo": odoo,
+            "espocrm": espo,
             "calendar": cal,
         }
 
@@ -446,24 +447,24 @@ class TestChatwootWebhookFlow:
         history = await _isolated_db.get_history("chatwoot_101")
         assert len(history) == 2
 
-    async def test_chatwoot_first_message_creates_odoo_lead(self, client, mock_intent, mock_openai_generate, _isolated_db, _mock_external_services):
-        """First message in a Chatwoot conversation creates an Odoo lead."""
+    async def test_chatwoot_first_message_schedules_espocrm_lead(self, client, mock_intent, mock_openai_generate, _isolated_db, _mock_external_services):
+        """First message schedules a delayed EspoCRM lead (10-min volcado)."""
         resp = await client.post("/chatwoot/webhook", json=_chatwoot_webhook_body(102, "necesito reparar mi portatil"))
 
         assert resp.status_code == 200
-        _mock_external_services["odoo"].create_lead.assert_called_once()
-        lead_kwargs = _mock_external_services["odoo"].create_lead.call_args.kwargs
-        assert "WhatsApp" in lead_kwargs["name"]
+        _mock_external_services["espocrm"].schedule_lead_from_conversation.assert_called_once()
+        call_kwargs = _mock_external_services["espocrm"].schedule_lead_from_conversation.call_args.kwargs
+        assert "lead_label" in call_kwargs
 
     async def test_chatwoot_second_message_no_lead(self, client, mock_intent, mock_openai_generate, _isolated_db, _mock_external_services):
-        """Second message does not create a new Odoo lead."""
+        """Second message does not schedule a new EspoCRM lead."""
         # Pre-populate history so it looks like a returning conversation
         await _isolated_db.save_message("chatwoot_103", "user", "previous msg")
 
         resp = await client.post("/chatwoot/webhook", json=_chatwoot_webhook_body(103, "hola otra vez"))
 
         assert resp.status_code == 200
-        _mock_external_services["odoo"].create_lead.assert_not_called()
+        _mock_external_services["espocrm"].schedule_lead_from_conversation.assert_not_called()
 
     async def test_chatwoot_repair_intent_uses_phone_from_source(self, client, mock_intent, mock_openai_generate, _mock_external_services):
         """Repair lookup uses phone from contact_inbox.source_id."""

@@ -12,7 +12,7 @@ load_dotenv()
 
 from config import settings
 from sheets_service import SheetsService
-from odoo_service import OdooService
+from espocrm_service import EspoCRMService
 
 
 async def test_config():
@@ -33,10 +33,15 @@ async def test_config():
     else:
         print(f"  GOOGLE_PRICES_SHEET_ID: {settings.GOOGLE_PRICES_SHEET_ID[:10]}...")
 
-    if not settings.ODOO_URL:
-        errors.append("ODOO_URL is empty")
+    if not settings.ESPOCRM_URL:
+        errors.append("ESPOCRM_URL is empty")
     else:
-        print(f"  ODOO_URL: {settings.ODOO_URL}")
+        print(f"  ESPOCRM_URL: {settings.ESPOCRM_URL}")
+
+    if not settings.ESPOCRM_API_KEY:
+        errors.append("ESPOCRM_API_KEY is empty")
+    else:
+        print(f"  ESPOCRM_API_KEY: {settings.ESPOCRM_API_KEY[:8]}...")
 
     if not settings.CHATWOOT_URL:
         errors.append("CHATWOOT_URL is empty")
@@ -124,22 +129,32 @@ async def test_prices_sheet():
         return False
 
 
-async def test_odoo_auth():
-    """Test Odoo authentication."""
+async def test_espocrm_ping():
+    """Test EspoCRM API key authentication with a lightweight GET."""
+    import httpx
+
     print("\n" + "=" * 50)
-    print("TEST: Odoo Authentication")
+    print("TEST: EspoCRM API Key")
     print("=" * 50)
 
     try:
-        svc = OdooService()
-        session = await svc._authenticate()
+        url = settings.ESPOCRM_URL.rstrip("/")
+        if not url or not settings.ESPOCRM_API_KEY:
+            print("  FAIL: ESPOCRM_URL or ESPOCRM_API_KEY not configured")
+            return False
 
-        if session:
-            print(f"  Session cookie: {session[:30]}...")
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                f"{url}/api/v1/App/user",
+                headers={"X-Api-Key": settings.ESPOCRM_API_KEY},
+            )
+
+        if resp.status_code == 200:
+            print(f"  Authenticated OK ({resp.status_code})")
             print("  PASS")
             return True
         else:
-            print("  FAIL: No session cookie returned")
+            print(f"  FAIL: status={resp.status_code} body={resp.text[:200]}")
             return False
 
     except Exception as e:
@@ -154,7 +169,7 @@ async def main():
     results.append(("Config", await test_config()))
     results.append(("Repairs Sheet", await test_repairs_sheet()))
     results.append(("Prices Sheet", await test_prices_sheet()))
-    results.append(("Odoo Auth", await test_odoo_auth()))
+    results.append(("EspoCRM API Key", await test_espocrm_ping()))
 
     print("\n" + "=" * 50)
     print("SUMMARY")

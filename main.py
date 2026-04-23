@@ -24,7 +24,9 @@ from openai_service import OpenAIService
 from whatsapp_service import WhatsAppService
 from sheets_service import SheetsService
 from chatwoot_service import ChatwootService
-from odoo_service import OdooService
+# Odoo DESCONECTADO - reemplazado por EspoCRM.
+# from odoo_service import OdooService
+from espocrm_service import EspoCRMService
 from intent_classifier import classify_intent
 from faq_service import load_brand_faq
 from calendar_service import CalendarService, process_ai_calendar_command
@@ -42,7 +44,9 @@ openai_svc = OpenAIService()
 whatsapp_svc = WhatsAppService()
 sheets_svc = SheetsService()
 chatwoot_svc = ChatwootService()
-odoo_svc = OdooService()
+# Odoo DESCONECTADO - reemplazado por EspoCRM.
+# odoo_svc = OdooService()
+espocrm_svc = EspoCRMService()
 calendar_svc = CalendarService()
 
 
@@ -609,7 +613,8 @@ async def chatwoot_webhook(request: Request):
         # Get conversation history
         history = await db.get_history(sender_key, limit=10)
 
-        # Create Odoo lead on first message (no prior history)
+        # En el primer mensaje (sin historial), programar un volcado diferido
+        # de la conversacion completa hacia EspoCRM (por defecto 10 min).
         if not history:
             sender_name = sender.get("name", "")
             sender_email = sender.get("email", "")
@@ -617,15 +622,16 @@ async def chatwoot_webhook(request: Request):
                 phone = sender.get("phone_number", "")
             lead_label = sender_name or phone or f"Conversación {conversation_id}"
             try:
-                await odoo_svc.create_lead(
-                    name=f"WhatsApp - {lead_label}",
+                espocrm_svc.schedule_lead_from_conversation(
+                    db=db,
+                    sender_key=sender_key,
+                    lead_label=lead_label,
                     contact_name=sender_name,
                     phone=phone or "",
                     email=sender_email,
-                    description=content,
                 )
             except Exception as e:
-                logger.error(f"Error creating Odoo lead: {e}", exc_info=True)
+                logger.error(f"Error scheduling EspoCRM lead: {e}", exc_info=True)
 
         # Save user message
         await db.save_message(sender_key, "user", content)

@@ -1,0 +1,105 @@
+import asyncio
+import logging
+import httpx
+
+from config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class EspoCRMService:
+    """Service for creating records in a custom EspoCRM entity (API key auth)."""
+
+    def __init__(self):
+        self.url = settings.ESPOCRM_URL.rstrip("/")
+        self.api_key = settings.ESPOCRM_API_KEY
+        self.entity = settings.ESPOCRM_ENTITY
+
+    async def create_lead(
+        self,
+        name: str,
+        contact_name: str = "",
+        phone: str = "",
+        email: str = "",
+        description: str = "",
+    ) -> str | None:
+        """Create a record in the configured EspoCRM entity. Returns the record ID or None."""
+        if not self.url or not self.api_key:
+            logger.warning("EspoCRM not configured (ESPOCRM_URL/ESPOCRM_API_KEY missing)")
+            return None
+
+        payload = {
+            "name": name,
+            "contactName": contact_name,
+            "phone": phone,
+            "email": email,
+            "description": description,
+            "source": "WhatsApp",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    f"{self.url}/api/v1/{self.entity}",
+                    headers={
+                        "X-Api-Key": self.api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                resp.raise_for_status()
+                record_id = resp.json().get("id")
+                logger.info(
+                    f"EspoCRM {self.entity} record created: id={record_id}, name={name}"
+                )
+                return record_id
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"EspoCRM HTTP error on {self.entity}: "
+                f"{e.response.status_code} - {e.response.text}"
+            )
+            return None
+        except Exception as e:
+            logger.error(f"Error creating EspoCRM {self.entity} record: {e}", exc_info=True)
+            return None
+
+    def schedule_lead_from_conversation(
+        self,
+        db,
+        sender_key: str,
+        lead_label: str,
+        contact_name: str,
+        phone: str,
+        email: str,
+        delay_seconds: int | None = None,
+    ) -> asyncio.Task:
+        """Fire-and-forget: after `delay_seconds`, dump full conversation and create
+        a Lead in EspoCRM. Called once when a brand-new conversation starts."""
+        delay = delay_seconds if delay_seconds is not None else settings.ESPOCRM_LEAD_DELAY_SECONDS
+
+        async def _run():
+            try:
+                await asyncio.sleep(delay)
+                history = await db.get_history(sender_key, limit=1000)
+                transcript_lines = []
+                for msg in history:
+                    role = "Cliente" if msg.get("role") == "user" else "Asistente"
+                    transcript_lines.append(f"{role}: {msg.get('content', '')}")
+                description = "\n".join(transcript_lines) if transcript_lines else ""
+
+                await self.create_lead(
+                    name=f"WhatsApp - {lead_label}",
+                    contact_name=contact_name,
+                    phone=phone,
+                    email=email,
+                    description=description,
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.error(
+                    f"Error scheduling EspoCRM lead for {sender_key}: {e}",
+                    exc_info=True,
+                )
+
+        return asyncio.create_task(_run())

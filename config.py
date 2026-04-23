@@ -43,12 +43,22 @@ class Settings(BaseSettings):
     GOOGLE_CALENDAR_SUBJECT: str = ""  # email to impersonate via domain-wide delegation
 
 
-    # Odoo CRM
+    # Odoo CRM (DESCONECTADO - reemplazado por EspoCRM)
+    # Las variables se mantienen para compatibilidad pero ya no se usan en main.py
     ODOO_URL: str = ""
     ODOO_DB: str = "odoo"
     ODOO_USER: str = "admin"
     ODOO_PASSWORD: str = "admin"
     ODOO_TEAM_ID: int = 7
+
+
+    # EspoCRM (ACTIVO)
+    ESPOCRM_URL: str = "http://187.124.38.104:8080"
+    ESPOCRM_API_KEY: str = ""
+    # Nombre interno de la entidad custom donde se crean los registros (columna "Name" en Entity Manager).
+    ESPOCRM_ENTITY: str = "CWTSBot"
+    # Retraso antes de volcar la conversacion completa al registro (segundos).
+    ESPOCRM_LEAD_DELAY_SECONDS: int = 600
 
 
     # Bot personality (customize for your business)
