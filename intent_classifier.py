@@ -37,8 +37,12 @@ async def classify_intent(
         "seguimiento, resguardo, o un equipo que dejó para reparar.\n"
         '- "needs_prices": true si el usuario pregunta por precios, costes, cuánto cuesta, '
         "tarifas, o información de precios de reparación.\n"
-        '- "wants_appointment": true si el usuario quiere agendar, reservar, programar una cita, '
-        "visita, pregunta por disponibilidad de horarios para ir a la tienda, o solicita recogida/envio a domicilio.\n"
+        '- "wants_appointment": true SOLO si el usuario pide EXPLICITAMENTE agendar/reservar/programar/coger una cita, '
+        "o pide que le recojan el equipo a domicilio (recogida, mensajero, que pasen a buscarlo). "
+        "IMPORTANTE: marcar FALSE si el usuario solo dice que va a ir, va a pasar, va a llevar, "
+        "quiere acercarse, o pregunta por horarios/direccion/parking. Eso es walk-in (sin cita) y "
+        "el bot no debe pedir datos. Solo true cuando el cliente usa la palabra 'cita', 'reservar', "
+        "'agendar', 'recogida', 'recoger', 'mensajero' o equivalente claro.\n"
         '- "needs_human": true SOLO si el usuario pide EXPLICITAMENTE hablar con una persona real, '
         "un agente humano, quiere ser transferido, o expresa frustracion clara con el bot "
         "(ej: 'quiero hablar con alguien de verdad', 'pasame con una persona', 'no me entiendes'). "
