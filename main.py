@@ -188,7 +188,7 @@ async def receive_message(request: Request):
             return {"status": "human mode"}
 
         # Bot mode: get conversation history for context
-        history = await db.get_history(sender, limit=10)
+        history = await db.get_history(sender, limit=30)
 
         # Save user message
         await db.save_message(sender, "user", text)
@@ -271,6 +271,7 @@ async def receive_message(request: Request):
             calendar_service=calendar_svc,
             ai_response=ai_response,
             attendee_phone=sender,
+            history=history,
         )
         logger.info("CLEAN RESPONSE (WhatsApp):\n%s", clean_response)
         logger.info("CREATED EVENT (WhatsApp): %s", created_event)
@@ -611,7 +612,7 @@ async def chatwoot_webhook(request: Request):
             return {"status": "human mode"}
 
         # Get conversation history
-        history = await db.get_history(sender_key, limit=10)
+        history = await db.get_history(sender_key, limit=30)
 
         # Si la conversacion es nueva (sin historial) o lleva mas de
         # ESPOCRM_NEW_LEAD_AFTER_SECONDS inactiva, programar un volcado
@@ -727,6 +728,7 @@ async def chatwoot_webhook(request: Request):
             calendar_service=calendar_svc,
             ai_response=ai_response,
             attendee_phone=phone or sender_key,
+            history=history,
         )
         logger.info("CLEAN RESPONSE (Chatwoot):\n%s", clean_response)
         logger.info("CREATED EVENT (Chatwoot): %s", created_event)

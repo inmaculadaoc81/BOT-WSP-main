@@ -82,17 +82,27 @@ class OpenAIService:
             The AI-generated response text
         """
         try:
-            # Build messages array with system prompt + FAQ + history + new message
-            fecha_actual, hora_actual = _now_madrid()
-            system_content = settings.SYSTEM_PROMPT.replace(
-                "{fecha_actual}", fecha_actual
-            ).replace("{hora_actual}", hora_actual)
+            # Construimos system_content con el bloque mas estable primero (favorece la cache de OpenAI):
+            # 1. SYSTEM_PROMPT (estatico, ~9k tokens)
+            # 2. FAQ general (estatico, ~2k tokens)
+            # 3. FAQ de marca (estatico por marca)
+            # 4. extra_context (variable: reparaciones/precios/citas)
+            # 5. CONTEXTO TEMPORAL (cambia cada minuto - va al final para no romper la cache)
+            system_content = settings.SYSTEM_PROMPT
             if self._general_faq:
                 system_content += "\n\n" + self._general_faq
             if brand_faq:
                 system_content += "\n\n[FAQ MARCA ESPECÍFICA]\n" + brand_faq
             if extra_context:
                 system_content += "\n\n" + extra_context
+
+            fecha_actual, hora_actual = _now_madrid()
+            system_content += (
+                f"\n\n[CONTEXTO TEMPORAL]\n"
+                f"Fecha actual: {fecha_actual}\n"
+                f"Hora actual: {hora_actual}\n"
+                f"Zona horaria: Europe/Madrid"
+            )
 
             messages = [{"role": "system", "content": system_content}]
 

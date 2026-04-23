@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -11,6 +12,11 @@ logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 MADRID_TZ = ZoneInfo("Europe/Madrid")
+
+# Validaciones de datos para citas/recogidas (sanity checks que el LLM puede saltarse).
+_EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+_PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d\s().-]{7,}\d)(?!\d)")
+_PLACEHOLDER_NAMES = {"cliente", "anonimo", "anónimo", "sin nombre", "n/a", "test", "prueba"}
 
 
 class CalendarService:
@@ -246,16 +252,117 @@ def strip_confirmation_command(ai_response: str) -> str:
     return "\n".join(clean_lines).strip()
 
 
+def _conversation_text(history: list[dict] | None) -> str:
+    """Concatena el contenido de todos los mensajes del historial."""
+    if not history:
+        return ""
+    return "\n".join(msg.get("content", "") for msg in history if msg.get("content"))
+
+
+def _is_real_name(name: str) -> bool:
+    """Comprueba que un nombre sea plausible: 2+ palabras y no un placeholder."""
+    name = (name or "").strip()
+    if not name or len(name) < 3:
+        return False
+    if name.lower() in _PLACEHOLDER_NAMES:
+        return False
+    return len(name.split()) >= 2
+
+
+def _validate_appointment(
+    command: dict,
+    history: list[dict] | None,
+    sender_phone: str,
+) -> tuple[bool, list[str]]:
+    """Valida que el comando CONFIRMAR_* tenga todos los datos requeridos.
+
+    Devuelve (is_valid, lista_de_datos_faltantes). El historial es la fuente
+    de verdad para email, telefono y direccion (no se confia en lo que el LLM
+    haya emitido en la linea CONFIRMAR_).
+    """
+    missing: list[str] = []
+    history_text = _conversation_text(history)
+
+    # Nombre: el LLM lo emite en la linea CONFIRMAR; comprobamos que sea real.
+    if not _is_real_name(command.get("customer_name", "")):
+        missing.append("nombre completo del cliente")
+
+    # Motivo: tambien lo emite el LLM.
+    reason = (command.get("reason") or "").strip()
+    if not reason or len(reason) < 3:
+        missing.append("motivo (equipo + problema)")
+
+    # Email: tiene que estar en algun mensaje del cliente.
+    if not _EMAIL_RE.search(history_text):
+        missing.append("correo electronico")
+
+    # Telefono: o ya lo tenemos del remitente o aparece en el historial.
+    has_phone = False
+    if sender_phone:
+        digits = re.sub(r"\D", "", sender_phone)
+        has_phone = len(digits) >= 9
+    if not has_phone and not _PHONE_RE.search(history_text):
+        missing.append("numero de telefono")
+
+    # Fecha y hora: validar que sea futura y dentro del horario de citas.
+    try:
+        dt = datetime.fromisoformat(command["datetime_iso"])
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=MADRID_TZ)
+        local = dt.astimezone(MADRID_TZ)
+        now = datetime.now(MADRID_TZ)
+
+        if local < now:
+            missing.append("fecha y hora futura (la indicada ya paso)")
+        elif local.weekday() >= 5:
+            missing.append("dia de lunes a viernes (no se atiende fines de semana)")
+        elif command.get("type") == "cita":
+            # Solo citas exigen ventana 10:00-17:00 estrictamente.
+            if not (10 <= local.hour < 17 or (local.hour == 17 and local.minute == 0)):
+                missing.append("hora entre las 10:00 y las 17:00")
+    except (ValueError, KeyError, TypeError):
+        missing.append("fecha y hora valida")
+
+    # Direccion: solo obligatoria para envios.
+    if command.get("type") == "envio":
+        address = (command.get("address") or "").strip()
+        # Esperamos al menos calle + numero + ciudad/CP. Heuristica: 3+ palabras y al menos un digito.
+        if not address or len(address.split()) < 3 or not any(c.isdigit() for c in address):
+            missing.append("direccion completa (calle, numero, codigo postal y ciudad)")
+
+    return (len(missing) == 0, missing)
+
+
+def _missing_data_message(command_type: str, missing: list[str]) -> str:
+    """Construye un mensaje cordial pidiendo los datos que faltan."""
+    if len(missing) == 1:
+        falta = missing[0]
+    else:
+        falta = ", ".join(missing[:-1]) + f" y {missing[-1]}"
+
+    if command_type == "envio":
+        accion = "registrar la recogida"
+    else:
+        accion = "registrar tu cita"
+
+    return (
+        f"Antes de {accion} necesito que me confirmes: {falta}. "
+        f"¿Me lo facilitas, por favor? 😊"
+    )
+
+
 async def process_ai_calendar_command(
     calendar_service: CalendarService,
     ai_response: str,
     attendee_phone: str = "",
+    history: list[dict] | None = None,
 ) -> tuple[str, dict | None]:
     """
     1. Limpia el mensaje para el usuario
     2. Detecta si hay comando CONFIRMAR_*
-    3. Crea el evento real en Google Calendar
-    4. Devuelve:
+    3. Valida que estan todos los datos requeridos en el historial
+    4. Solo si la validacion pasa, crea el evento real en Google Calendar
+    5. Devuelve:
        - user_message: texto limpio para enviar al cliente
        - created_event: evento creado o None
     """
@@ -264,6 +371,16 @@ async def process_ai_calendar_command(
 
     if not command:
         return user_message, None
+
+    # Validacion en codigo: bloquea el LLM si trata de confirmar sin datos.
+    is_valid, missing = _validate_appointment(command, history, attendee_phone)
+    if not is_valid:
+        logger.warning(
+            "Bloqueado CONFIRMAR_%s por datos faltantes",
+            command["type"].upper(),
+            extra={"missing": missing, "command": command},
+        )
+        return _missing_data_message(command["type"], missing), None
 
     created_event = None
 
