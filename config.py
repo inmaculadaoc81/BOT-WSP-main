@@ -57,11 +57,11 @@ class Settings(BaseSettings):
     ESPOCRM_API_KEY: str = ""
     # Nombre interno de la entidad custom donde se crean los registros (columna "Name" en Entity Manager).
     ESPOCRM_ENTITY: str = "CWTSBot"
-    # Retraso antes de volcar la conversacion completa al registro (segundos).
-    ESPOCRM_LEAD_DELAY_SECONDS: int = 60
-    # Tiempo de inactividad (segundos) tras el cual un nuevo mensaje cuenta como
-    # conversacion nueva y programa otro lead en EspoCRM (10 min = 600).
-    ESPOCRM_NEW_LEAD_AFTER_SECONDS: int = 600
+    # Retraso antes de volcar la conversacion completa al registro (20 min = 1200).
+    ESPOCRM_LEAD_DELAY_SECONDS: int = 1200
+    # Tiempo de inactividad tras el cual un nuevo mensaje cuenta como
+    # conversacion nueva y programa otro lead en EspoCRM (24 h = 86400).
+    ESPOCRM_NEW_LEAD_AFTER_SECONDS: int = 86400
 
 
     # Bot personality (customize for your business)
