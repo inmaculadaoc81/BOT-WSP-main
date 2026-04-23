@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # Nombre interno de la entidad custom donde se crean los registros (columna "Name" en Entity Manager).
     ESPOCRM_ENTITY: str = "CWTSBot"
     # Retraso antes de volcar la conversacion completa al registro (segundos).
-    ESPOCRM_LEAD_DELAY_SECONDS: int = 600
+    ESPOCRM_LEAD_DELAY_SECONDS: int = 60
 
 
     # Bot personality (customize for your business)
