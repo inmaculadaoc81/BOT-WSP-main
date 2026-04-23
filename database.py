@@ -84,6 +84,38 @@ class Database:
             # Reverse to get chronological order
             return [{"role": row["role"], "content": row["content"]} for row in reversed(rows)]
 
+    async def get_history_since(
+        self, phone_number: str, since: datetime, limit: int = 1000
+    ) -> list[dict]:
+        """Get messages for this sender created at-or-after `since`, chronological."""
+        since_iso = since.isoformat()
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """SELECT role, content FROM messages
+                   WHERE phone_number = ? AND created_at >= ?
+                   ORDER BY created_at ASC
+                   LIMIT ?""",
+                (phone_number, since_iso, limit),
+            )
+            rows = await cursor.fetchall()
+            return [{"role": row["role"], "content": row["content"]} for row in rows]
+
+    async def get_last_message_time(self, phone_number: str) -> datetime | None:
+        """Return UTC datetime of the most recent message for this sender, or None."""
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                """SELECT created_at FROM messages
+                   WHERE phone_number = ?
+                   ORDER BY created_at DESC
+                   LIMIT 1""",
+                (phone_number,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            return datetime.fromisoformat(row[0])
+
     async def get_conversation_mode(self, phone_number: str) -> str:
         """Get the current mode for a conversation (bot or human)."""
         async with aiosqlite.connect(self.db_path) as db:

@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     ESPOCRM_ENTITY: str = "CWTSBot"
     # Retraso antes de volcar la conversacion completa al registro (segundos).
     ESPOCRM_LEAD_DELAY_SECONDS: int = 60
+    # Tiempo de inactividad (segundos) tras el cual un nuevo mensaje cuenta como
+    # conversacion nueva y programa otro lead en EspoCRM (10 min = 600).
+    ESPOCRM_NEW_LEAD_AFTER_SECONDS: int = 600
 
 
     # Bot personality (customize for your business)

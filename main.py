@@ -1,7 +1,7 @@
 import logging
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Request, Response, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -613,9 +613,16 @@ async def chatwoot_webhook(request: Request):
         # Get conversation history
         history = await db.get_history(sender_key, limit=10)
 
-        # En el primer mensaje (sin historial), programar un volcado diferido
-        # de la conversacion completa hacia EspoCRM (por defecto 10 min).
-        if not history:
+        # Si la conversacion es nueva (sin historial) o lleva mas de
+        # ESPOCRM_NEW_LEAD_AFTER_SECONDS inactiva, programar un volcado
+        # diferido de la conversacion completa hacia EspoCRM.
+        last_msg_time = await db.get_last_message_time(sender_key)
+        now_utc = datetime.now(timezone.utc)
+        is_new_session = last_msg_time is None or (
+            (now_utc - last_msg_time).total_seconds()
+            > settings.ESPOCRM_NEW_LEAD_AFTER_SECONDS
+        )
+        if is_new_session:
             sender_name = sender.get("name", "")
             sender_email = sender.get("email", "")
             if not phone:
@@ -629,6 +636,7 @@ async def chatwoot_webhook(request: Request):
                     contact_name=sender_name,
                     phone=phone or "",
                     email=sender_email,
+                    session_started_at=now_utc,
                 )
             except Exception as e:
                 logger.error(f"Error scheduling EspoCRM lead: {e}", exc_info=True)

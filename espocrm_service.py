@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime
 import httpx
 
 from config import settings
@@ -71,16 +72,20 @@ class EspoCRMService:
         contact_name: str,
         phone: str,
         email: str,
+        session_started_at: datetime,
         delay_seconds: int | None = None,
     ) -> asyncio.Task:
-        """Fire-and-forget: after `delay_seconds`, dump full conversation and create
-        a Lead in EspoCRM. Called once when a brand-new conversation starts."""
+        """Fire-and-forget: after `delay_seconds`, dump the messages of this session
+        (those created at or after `session_started_at`) and create a lead in
+        EspoCRM. Called when a new session begins."""
         delay = delay_seconds if delay_seconds is not None else settings.ESPOCRM_LEAD_DELAY_SECONDS
 
         async def _run():
             try:
                 await asyncio.sleep(delay)
-                history = await db.get_history(sender_key, limit=1000)
+                history = await db.get_history_since(
+                    sender_key, since=session_started_at, limit=1000
+                )
                 transcript_lines = []
                 for msg in history:
                     role = "Cliente" if msg.get("role") == "user" else "Asistente"
