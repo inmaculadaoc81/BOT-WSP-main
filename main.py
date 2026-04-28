@@ -232,6 +232,13 @@ async def receive_message(request: Request):
             except Exception as e:
                 logger.error(f"Error fetching prices: {e}", exc_info=True)
 
+        if intent.needs_rental_lookup:
+            try:
+                equipos = await sheets_svc.get_available_equipos()
+                extra_context_parts.append(sheets_svc.format_equipos_for_prompt(equipos))
+            except Exception as e:
+                logger.error(f"Error fetching rental equipment: {e}", exc_info=True)
+
         if not intent.wants_appointment and _is_in_appointment_flow(history):
             intent.wants_appointment = True
             logger.info("Forced wants_appointment=True (active appointment flow detected in history)")
@@ -688,6 +695,13 @@ async def chatwoot_webhook(request: Request):
                     extra_context_parts.append(sheets_svc.format_prices_for_prompt(prices))
             except Exception as e:
                 logger.error(f"Error fetching prices: {e}", exc_info=True)
+
+        if intent.needs_rental_lookup:
+            try:
+                equipos = await sheets_svc.get_available_equipos()
+                extra_context_parts.append(sheets_svc.format_equipos_for_prompt(equipos))
+            except Exception as e:
+                logger.error(f"Error fetching rental equipment: {e}", exc_info=True)
 
         if not intent.wants_appointment and _is_in_appointment_flow(history):
             intent.wants_appointment = True

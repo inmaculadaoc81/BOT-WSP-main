@@ -18,6 +18,7 @@ class IntentResult:
     needs_prices: bool = False
     wants_appointment: bool = False
     needs_human: bool = False
+    needs_rental_lookup: bool = False
     brand: str | None = None
 
 
@@ -48,6 +49,9 @@ async def classify_intent(
         "(ej: 'quiero hablar con alguien de verdad', 'pasame con una persona', 'no me entiendes'). "
         "IMPORTANTE: NO marcar needs_human cuando el usuario describe un problema tecnico, una averia, "
         "o quiere comprar un producto/pieza. Esos casos los maneja el bot.\n"
+        '- "needs_rental_lookup": true si el usuario pregunta qué equipos hay disponibles para alquilar, '
+        "qué modelos tienen, si tienen gaming/Mac/Windows/Surface para alquiler, qué portátiles tienen, "
+        "disponibilidad de equipos de alquiler, o cualquier consulta sobre el catálogo o stock de alquiler.\n"
         '- "brand": el slug de la marca si el usuario menciona o pregunta sobre una marca específica. '
         f"Valores válidos: {brands_str}, o null si no menciona ninguna marca.\n"
         "Devuelve SOLO JSON válido, sin explicación."
@@ -80,6 +84,7 @@ async def classify_intent(
             needs_prices=bool(data.get("needs_prices", False)),
             wants_appointment=bool(data.get("wants_appointment", False)),
             needs_human=bool(data.get("needs_human", False)),
+            needs_rental_lookup=bool(data.get("needs_rental_lookup", False)),
             brand=data.get("brand"),
         )
 

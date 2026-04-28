@@ -107,6 +107,8 @@ class SheetsService:
         self._cache_time: float = 0
         self._prices_cache: list[dict] = []
         self._prices_cache_time: float = 0
+        self._equipos_cache: list[dict] = []
+        self._equipos_cache_time: float = 0
 
     async def connect(self):
         """Authenticate with Google Sheets API using a service account."""
@@ -302,6 +304,78 @@ class SheetsService:
         lines.append("- Si no tiene activas pero si anteriores, informa: 'No tienes reparaciones activas. Tienes X reparaciones anteriores ya finalizadas.'")
         lines.append("- Si pregunta por un resguardo específico del historial, indícale su estado.")
         lines.append("- NUNCA inventes información que no esté en estos datos.")
+
+        return "\n".join(lines)
+
+    async def _fetch_all_equipos(self) -> list[dict]:
+        """Fetch all rows from the 'Equipos' tab in the repairs spreadsheet."""
+        if (
+            len(self._equipos_cache) > 0
+            and (time.time() - self._equipos_cache_time) < settings.SHEETS_CACHE_TTL
+        ):
+            return self._equipos_cache
+
+        if not self._client:
+            await self.connect()
+            if not self._client:
+                return []
+
+        try:
+            sheet = self._client.open_by_key(settings.GOOGLE_SHEETS_ID).worksheet("Equipos")
+            raw_records = sheet.get_all_records()
+            self._equipos_cache = raw_records
+            self._equipos_cache_time = time.time()
+            logger.info(f"Fetched {len(raw_records)} equipment records from Equipos sheet")
+            return raw_records
+        except Exception as e:
+            logger.error(f"Error fetching Equipos sheet: {e}", exc_info=True)
+            if self._equipos_cache:
+                return self._equipos_cache
+            return []
+
+    async def get_available_equipos(self) -> list[dict]:
+        """Return equipment that is active and not currently rented."""
+        records = await self._fetch_all_equipos()
+        available = []
+        for r in records:
+            activo = str(r.get("activo", "")).strip().lower()
+            estado = str(r.get("estado", "")).strip().lower()
+            if activo in ("si", "sí", "1", "true", "yes", "s") and estado != "alquilado":
+                available.append({
+                    "marca": str(r.get("marca", "")).strip(),
+                    "modelo": str(r.get("modelo", "")).strip(),
+                    "sistema_operativo": str(r.get("sistema_operativo", "")).strip(),
+                    "caracteristicas": str(r.get("caracteristicas", "")).strip(),
+                })
+        return available
+
+    def format_equipos_for_prompt(self, equipos: list[dict]) -> str:
+        """Format available rental equipment as context for the AI."""
+        if not equipos:
+            return (
+                "[EQUIPOS DISPONIBLES PARA ALQUILER]\n"
+                "No hay equipos disponibles en este momento.\n"
+                "INSTRUCCIONES: Informa al cliente de que actualmente no hay stock disponible "
+                "y ofrécele dejar sus datos para ser contactado cuando haya disponibilidad."
+            )
+
+        lines = ["[EQUIPOS DISPONIBLES PARA ALQUILER]"]
+        lines.append(f"Equipos disponibles actualmente: {len(equipos)}\n")
+
+        for i, e in enumerate(equipos, 1):
+            parts = [f"{i}. *{e['marca']} {e['modelo']}*"]
+            if e["sistema_operativo"]:
+                parts.append(f"SO: {e['sistema_operativo']}")
+            if e["caracteristicas"]:
+                parts.append(f"Características: {e['caracteristicas']}")
+            lines.append(" | ".join(parts))
+
+        lines.append("\nINSTRUCCIONES EQUIPOS ALQUILER:")
+        lines.append("- Muestra solo los equipos listados. No inventes modelos ni especificaciones.")
+        lines.append("- Si el cliente busca un tipo (gaming, Mac, Windows, Surface), filtra y muestra los que correspondan.")
+        lines.append("- No menciones estados internos ni si un equipo está alquilado. Solo muestra los disponibles.")
+        lines.append("- Si ninguno coincide con lo que busca, díselo honestamente y muestra los disponibles.")
+        lines.append("- Recuerda siempre que la disponibilidad final la confirma un asistente.")
 
         return "\n".join(lines)
 
