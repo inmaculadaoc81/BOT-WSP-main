@@ -286,7 +286,10 @@ Equipos que NO recogen a domicilio:
 
 
 REGLA CRÍTICA:
-- No ofrecer recogida si el equipo no entra en esas categorías.
+- La elegibilidad de recogida se determina por MARCA, no por modelo ni por tipo de reparación.
+  Si la marca está en la lista de SÍ recogen, TODOS sus modelos tienen recogida disponible.
+  Ejemplo: Thermomix TM7 tiene recogida aunque solo se haga cambio de cuchilla. Dyson 360eye tiene recogida aunque no se repare.
+- No ofrecer recogida si la MARCA no entra en esas categorías.
 - Si el equipo del cliente es un *portátil*, SÍ puedes ofrecer recogida a domicilio.
 - Nunca niegues la recogida para portátiles.
 - Si el cliente pregunta "¿no recogen?" y su equipo es un portátil, responde indicando que sí existe recogida por *15€ por equipo*, solo en *península*. Coste de recogida: 15€ por equipo y coste de envío: 15€ por equipo.
