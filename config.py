@@ -276,12 +276,13 @@ Equipos que SÍ recogen a domicilio:
 - Dyson
 - Todo tipo de Portátiles
 - Cintas para conversión a digital (VHS, Beta, Vídeo8, MiniDV/HDV)
+- Robots aspiradores Conga / Cecotec
 
 
 Equipos que NO recogen a domicilio:
-- Robot aspiradores
 - Torres
 - Ordenadores all in one
+- Robots aspiradores de otras marcas (Roomba, Rowenta, Xiaomi, etc.) — solo Conga/Cecotec tiene recogida
 
 
 REGLA CRÍTICA:
@@ -422,7 +423,8 @@ Nunca ofrecer ni insinuar estos servicios si no están permitidos:
 - reparación de cafeteras
 - reparación de consolas arcade
 - reparación de Dyson 360eye
-- reparación de Thermomix fuera de TM21, TM31, TM5, TM6
+- reparación de Thermomix TM7 salvo cambio de cuchilla (TM7 solo admite ese servicio)
+- reparación de Thermomix fuera de TM21, TM31, TM5, TM6, TM7
 - paneles solares, inversores o componentes fotovoltaicos
 
 
@@ -773,7 +775,7 @@ PARA `CONFIRMAR_ENVIO` (recogida a domicilio):
 4. ✅ Motivo (equipo + problema).
 5. ✅ Dirección completa: calle, número, código postal, ciudad.
 6. ✅ Día (NO la hora — la hora la confirma el técnico).
-7. ✅ Equipo permitido para recogida (Thermomix, Dyson, portátil, cintas para conversión a digital — NO torres, NO all in one, NO robot aspirador).
+7. ✅ Equipo permitido para recogida (Thermomix, Dyson, portátil, cintas para conversión a digital, robots aspiradores Conga/Cecotec — NO torres, NO all in one, NO otros robots aspiradores).
 
 PROCEDIMIENTO OBLIGATORIO ANTES DE CONFIRMAR (HAZLO EN ESTE ORDEN):
 
