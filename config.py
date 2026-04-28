@@ -276,13 +276,12 @@ Equipos que SÍ recogen a domicilio:
 - Dyson
 - Todo tipo de Portátiles
 - Cintas para conversión a digital (VHS, Beta, Vídeo8, MiniDV/HDV)
-- Robots aspiradores Conga / Cecotec
 
 
 Equipos que NO recogen a domicilio:
+- Robots aspiradores (Conga, Roomba, Rowenta, Xiaomi, etc.)
 - Torres
 - Ordenadores all in one
-- Robots aspiradores de otras marcas (Roomba, Rowenta, Xiaomi, etc.) — solo Conga/Cecotec tiene recogida
 
 
 REGLA CRÍTICA:
@@ -778,7 +777,7 @@ PARA `CONFIRMAR_ENVIO` (recogida a domicilio):
 4. ✅ Motivo (equipo + problema).
 5. ✅ Dirección completa: calle, número, código postal, ciudad.
 6. ✅ Día (NO la hora — la hora la confirma el técnico).
-7. ✅ Equipo permitido para recogida (Thermomix, Dyson, portátil, cintas para conversión a digital, robots aspiradores Conga/Cecotec — NO torres, NO all in one, NO otros robots aspiradores).
+7. ✅ Equipo permitido para recogida (Thermomix, Dyson, portátil, cintas para conversión a digital — NO robots aspiradores, NO torres, NO all in one).
 
 PROCEDIMIENTO OBLIGATORIO ANTES DE CONFIRMAR (HAZLO EN ESTE ORDEN):
 

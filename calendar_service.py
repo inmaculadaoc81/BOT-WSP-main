@@ -116,6 +116,66 @@ class CalendarService:
             logger.exception(f"Error creating calendar event: {e}")
             return None
 
+    def get_busy_slots_for_day(self, datetime_iso: str) -> list[tuple]:
+        """Return list of (start, end) datetime pairs for all events on the given day."""
+        try:
+            dt = datetime.fromisoformat(datetime_iso)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=MADRID_TZ)
+            local = dt.astimezone(MADRID_TZ)
+        except (ValueError, TypeError):
+            return []
+
+        day_start = local.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+
+        try:
+            service = self._get_service()
+            result = service.events().list(
+                calendarId=self.calendar_id,
+                timeMin=day_start.isoformat(),
+                timeMax=day_end.isoformat(),
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+
+            busy = []
+            for event in result.get("items", []):
+                s_str = event.get("start", {}).get("dateTime")
+                e_str = event.get("end", {}).get("dateTime")
+                if s_str and e_str:
+                    s = datetime.fromisoformat(s_str).astimezone(MADRID_TZ)
+                    e = datetime.fromisoformat(e_str).astimezone(MADRID_TZ)
+                    busy.append((s, e))
+            return busy
+        except Exception as exc:
+            logger.error(f"Error fetching busy slots: {exc}", exc_info=True)
+            return []
+
+    def get_available_slots(self, datetime_iso: str, duration_minutes: int = 30) -> list[str]:
+        """Return free HH:MM slots within 10:00-17:00 for the given day."""
+        busy = self.get_busy_slots_for_day(datetime_iso)
+
+        try:
+            dt = datetime.fromisoformat(datetime_iso)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=MADRID_TZ)
+            local = dt.astimezone(MADRID_TZ)
+        except (ValueError, TypeError):
+            return []
+
+        free = []
+        current = local.replace(hour=10, minute=0, second=0, microsecond=0)
+        cutoff = local.replace(hour=17, minute=0, second=0, microsecond=0)
+
+        while current <= cutoff:
+            slot_end = current + timedelta(minutes=duration_minutes)
+            if not _overlaps(current, slot_end, busy):
+                free.append(current.strftime("%H:%M"))
+            current += timedelta(minutes=30)
+
+        return free
+
     def get_appointment_context(self) -> str:
         """Return appointment instructions as context for the AI."""
         now = datetime.now(MADRID_TZ)
@@ -147,8 +207,9 @@ class CalendarService:
             f"1. Datos necesarios: nombre completo + correo electronico + numero de telefono + motivo (equipo + problema).\n"
             f"2. Si falta alguno, pidelo antes de continuar.\n"
             f"3. Pregunta fecha y hora preferida.\n"
-            f"4. Las citas de diagnostico solo se pueden agendar de Lunes a Viernes entre 10:00 y 17:00.\n"
+            f"4. Las citas de diagnostico solo se pueden agendar de Lunes a Viernes entre 10:00 y 17:00 (ultimo slot a las 17:00).\n"
             f"5. Si pide horario fuera de rango (antes de 10:00, despues de 17:00, fin de semana o festivo), indicale el horario correcto.\n"
+            f"   IMPORTANTE: si el sistema devuelve un mensaje indicando que la hora ya esta ocupada y ofrece alternativas, trasladaselo al cliente tal cual y preguntale que hora prefiere de las disponibles.\n"
             f"6. Cuando tengas TODOS los datos, muestra un RESUMEN para que el cliente confirme:\n"
             f"   '📋 *Resumen de tu cita:*\n"
             f"   👤 Nombre: [nombre]\n"
@@ -260,6 +321,14 @@ def strip_confirmation_command(ai_response: str) -> str:
         clean_lines.append(line)
 
     return "\n".join(clean_lines).strip()
+
+
+def _overlaps(slot_start: datetime, slot_end: datetime, busy: list[tuple]) -> bool:
+    """True if [slot_start, slot_end) overlaps any (start, end) in busy."""
+    for bs, be in busy:
+        if slot_start < be and slot_end > bs:
+            return True
+    return False
 
 
 def _conversation_text(history: list[dict] | None) -> str:
@@ -395,6 +464,34 @@ async def process_ai_calendar_command(
     created_event = None
 
     if command["type"] == "cita":
+        # Verificar disponibilidad del slot antes de crear el evento
+        try:
+            req_dt = datetime.fromisoformat(command["datetime_iso"])
+            if req_dt.tzinfo is None:
+                req_dt = req_dt.replace(tzinfo=MADRID_TZ)
+            req_start = req_dt.astimezone(MADRID_TZ)
+            req_end = req_start + timedelta(minutes=30)
+
+            busy = calendar_service.get_busy_slots_for_day(command["datetime_iso"])
+            if _overlaps(req_start, req_end, busy):
+                req_time = req_start.strftime("%H:%M")
+                req_date = req_start.strftime("%d/%m/%Y")
+                available = calendar_service.get_available_slots(command["datetime_iso"])
+                if available:
+                    alts = ", ".join(available[:6])
+                    return (
+                        f"Lo siento 😊 La hora *{req_time}* del {req_date} ya está ocupada.\n"
+                        f"Horas disponibles ese día: *{alts}*\n"
+                        f"¿Cuál de estas horas te vendría mejor?"
+                    ), None
+                else:
+                    return (
+                        f"Lo siento 😊 El día {req_date} no tenemos horas disponibles entre las 10:00 y las 17:00.\n"
+                        f"¿Te gustaría intentar con otro día?"
+                    ), None
+        except Exception as exc:
+            logger.error(f"Error checking slot availability: {exc}", exc_info=True)
+
         created_event = await calendar_service.create_event(
             title=f"CITA: {command['customer_name']}",
             start_iso=command["datetime_iso"],

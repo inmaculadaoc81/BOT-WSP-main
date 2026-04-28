@@ -44,8 +44,8 @@ RECOGIDA Y ENVÍO A DOMICILIO:
 - La hora exacta depende de la empresa de transporte, no de Kelatos. NUNCA confirmar hora concreta.
 - Tras la recogida, suele tardar en llegar 48 a 72 horas.
 - Para recogida se pide: nombre, correo, dirección, código postal, ciudad, teléfono y DÍA (no hora).
-- Equipos que SÍ entran en recogida: portátiles, Thermomix, Dyson, cintas para conversión a digital (VHS, Beta, Vídeo8, MiniDV/HDV), robots aspiradores Conga/Cecotec.
-- Equipos que NO entran en recogida: torres, ordenadores all-in-one, robots aspiradores de otras marcas (Roomba, Rowenta, Xiaomi, etc.).
+- Equipos que SÍ entran en recogida: portátiles, Thermomix, Dyson, cintas para conversión a digital (VHS, Beta, Vídeo8, MiniDV/HDV).
+- Equipos que NO entran en recogida: robots aspiradores (Conga, Roomba, Rowenta, Xiaomi, etc.), torres, ordenadores all-in-one.
 - Para envío de vuelta al cliente: solo si el estado es Reparado, Presupuesto Rechazado o No tiene Reparación. Se pide: nombre completo, dirección, CP y ciudad.
 
 PAGOS:
