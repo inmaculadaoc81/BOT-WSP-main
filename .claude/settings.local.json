@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast; [ast.parse\\(open\\(f, encoding='utf-8'\\).read\\(\\)\\) for f in ['espocrm_service.py', 'config.py', 'main.py', 'tests.py', 'tests/test_integration.py']]; print\\('OK all parsed'\\)\")",
+      "Bash(python -c \"import ast; [ast.parse\\(open\\(f, encoding='utf-8'\\).read\\(\\)\\) for f in ['espocrm_service.py', 'config.py']]; print\\('OK'\\)\")",
+      "Bash(git --version)"
+    ]
+  }
+}
