@@ -176,16 +176,81 @@ class CalendarService:
 
         return free
 
+    def get_busy_slots_range(self, days_ahead: int = 14) -> dict[str, list[str]]:
+        """Fetch busy HH:MM slots for the next `days_ahead` days in one API call.
+
+        Returns { "YYYY-MM-DD": ["HH:MM", ...] }
+        Days not present in the result have no events (all slots free).
+        """
+        try:
+            service = self._get_service()
+            now = datetime.now(MADRID_TZ)
+            time_min = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            time_max = time_min + timedelta(days=days_ahead + 1)
+
+            result = service.events().list(
+                calendarId=self.calendar_id,
+                timeMin=time_min.isoformat(),
+                timeMax=time_max.isoformat(),
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+
+            busy: dict[str, list[str]] = {}
+            for event in result.get("items", []):
+                s_str = event.get("start", {}).get("dateTime")
+                if not s_str:
+                    continue
+                s_dt = datetime.fromisoformat(s_str).astimezone(MADRID_TZ)
+                day_key = s_dt.strftime("%Y-%m-%d")
+                time_str = s_dt.strftime("%H:%M")
+                busy.setdefault(day_key, []).append(time_str)
+
+            return busy
+        except Exception as exc:
+            logger.error(f"Error fetching busy slots range: {exc}", exc_info=True)
+            return {}
+
     def get_appointment_context(self) -> str:
         """Return appointment instructions as context for the AI."""
         now = datetime.now(MADRID_TZ)
         today = now.strftime("%A %d/%m/%Y")
+
+        # One API call for all busy slots in the next 14 days
+        busy_range = self.get_busy_slots_range(days_ahead=14)
+        if busy_range:
+            busy_lines = [
+                f"  {day}: {', '.join(sorted(times))}"
+                for day, times in sorted(busy_range.items())
+            ]
+            busy_block = (
+                "[SLOTS OCUPADOS — PROXIMOS 14 DIAS]\n"
+                + "\n".join(busy_lines)
+                + "\nLos dias/horas que NO aparecen aqui estan LIBRES."
+            )
+        else:
+            busy_block = (
+                "[SLOTS OCUPADOS — PROXIMOS 14 DIAS]\n"
+                "No hay citas registradas. Todos los horarios 10:00–17:00 estan disponibles."
+            )
 
         return (
             f"[SISTEMA DE CITAS Y ENVIOS]\n"
             f"Fecha actual: {today}\n"
             f"Horario de atencion del local: Lunes a Viernes de 09:30 a 18:00.\n"
             f"Sabados, domingos y festivos cerrados.\n"
+            f"\n{busy_block}\n"
+            f"\n⚠️ REGLA DE DISPONIBILIDAD — OBLIGATORIO:\n"
+            f"En cuanto el cliente proponga fecha y hora concreta para su cita:\n"
+            f"  1. Comprueba si ese dia+hora aparece en SLOTS OCUPADOS.\n"
+            f"  2. Si esta OCUPADO: comunica al cliente inmediatamente que ese horario no esta disponible y ofrece hasta 6 horas libres de ese mismo dia. NO muestres el resumen de cita hasta que el cliente elija un horario libre.\n"
+            f"  3. Si esta LIBRE: entonces muestra el resumen completo para que el cliente confirme.\n"
+            f"  4. Si el dia no aparece en la lista de ocupados, todos sus horarios estan disponibles.\n"
+            f"\n[FESTIVOS OFICIALES 2026 — LISTA EXACTA]\n"
+            f"SOLO bloquear estas fechas como festivos. NO añadir ninguna otra por tu cuenta:\n"
+            f"  Nacionales: 1 enero, 6 enero, 3 abril (Viernes Santo), 1 mayo, 15 agosto, 12 octubre, 2 noviembre, 7 diciembre, 8 diciembre, 25 diciembre.\n"
+            f"  Madrid: 2 mayo, 15 mayo, 9 noviembre.\n"
+            f"❌ El 30 de abril NO es festivo en 2026. Cualquier fecha fuera de la lista anterior es laborable.\n"
             f"\n🚨 DIFERENCIA CRITICA — LEE ANTES DE ACTUAR:\n"
             f"\nHay TRES situaciones distintas. NO las confundas:\n"
             f"\n1. WALK-IN (DEFAULT — el cliente solo quiere venir al local sin agendar):\n"
@@ -208,9 +273,8 @@ class CalendarService:
             f"2. Si falta alguno, pidelo antes de continuar.\n"
             f"3. Pregunta fecha y hora preferida.\n"
             f"4. Las citas de diagnostico solo se pueden agendar de Lunes a Viernes entre 10:00 y 17:00 (ultimo slot a las 17:00).\n"
-            f"5. Si pide horario fuera de rango (antes de 10:00, despues de 17:00, fin de semana o festivo), indicale el horario correcto.\n"
-            f"   IMPORTANTE: si el sistema devuelve un mensaje indicando que la hora ya esta ocupada y ofrece alternativas, trasladaselo al cliente tal cual y preguntale que hora prefiere de las disponibles.\n"
-            f"6. Cuando tengas TODOS los datos, muestra un RESUMEN para que el cliente confirme:\n"
+            f"5. En cuanto el cliente proponga hora: verifica disponibilidad en SLOTS OCUPADOS (arriba). Si esta ocupado, dilo y ofrece alternativas ANTES de mostrar el resumen. Si es festivo de la lista oficial, indica que esta cerrado y pide otro dia.\n"
+            f"6. Cuando tengas TODOS los datos Y el slot este libre, muestra un RESUMEN para que el cliente confirme:\n"
             f"   '📋 *Resumen de tu cita:*\n"
             f"   👤 Nombre: [nombre]\n"
             f"   🔧 Motivo: [equipo + problema]\n"
@@ -230,7 +294,7 @@ class CalendarService:
             f"\nPROTOCOLO DE ENVIO (mensajero recoge a domicilio):\n"
             f"1. Datos necesarios: nombre completo + correo electronico + numero de telefono + motivo (equipo + problema) + direccion completa (calle, numero, CP, ciudad).\n"
             f"2. Si falta alguno, pidelo antes de continuar.\n"
-            f"3. Solo se ofrece recogida para Thermomix, Dyson y portatiles. No para torres, all in one ni robot aspiradores.\n"
+            f"3. La recogida esta disponible para cualquier equipo que Kelatos atiende. Si hacemos diagnostico de ese equipo, hay recogida. No hay restriccion adicional por tipo.\n"
             f"4. Informar del coste: 15€ por equipo.\n"
             f"5. Para recogida, solo pedir el DIA preferido. No confirmar hora exacta.\n"
             f"6. Si la solicitud se hace despues de las 13:00, solo puede programarse a partir del dia subsiguiente.\n"
