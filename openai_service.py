@@ -1,0 +1,135 @@
+import logging
+import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from openai import AsyncOpenAI
+
+from config import settings
+from faq_service import load_general_faq
+
+_MADRID_TZ = ZoneInfo("Europe/Madrid")
+_DIAS_SEMANA = [
+    "lunes", "martes", "miércoles", "jueves",
+    "viernes", "sábado", "domingo",
+]
+_MESES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+
+
+def _now_madrid() -> tuple[str, str]:
+    now = datetime.now(_MADRID_TZ)
+    fecha = f"{_DIAS_SEMANA[now.weekday()]} {now.day} de {_MESES[now.month - 1]} de {now.year}"
+    hora = now.strftime("%H:%M")
+    return fecha, hora
+
+logger = logging.getLogger(__name__)
+
+# Patterns for generic filler phrases that gpt-4o-mini likes to append
+_FILLER_PATTERNS = [
+    r"si necesitas.*",
+    r"no dudes en.*",
+    r"estoy aquí para.*",
+    r"¿necesitas algo.*",
+    r"¿algo más.*",
+    r"si tienes alguna.*",
+    r"no dude en.*",
+    r"cualquier cosa.*avis.*",
+    r"quedo a tu disposición.*",
+    r"quedo atento.*",
+]
+_FILLER_RE = re.compile(
+    r"[\.\!\s]*\s*(" + "|".join(_FILLER_PATTERNS) + r")\s*$",
+    re.IGNORECASE,
+)
+
+
+def _strip_filler(text: str) -> str:
+    """Remove generic closing filler phrases from the end of a response."""
+    cleaned = _FILLER_RE.sub("", text).rstrip()
+    # Ensure it ends with proper punctuation
+    if cleaned and cleaned[-1] not in ".!?":
+        cleaned += "."
+    return cleaned
+
+
+class OpenAIService:
+    """Service for generating AI responses using OpenAI."""
+
+    def __init__(self):
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        self.model = settings.OPENAI_MODEL
+        self._general_faq = load_general_faq()
+
+    async def generate_response(
+        self,
+        user_message: str,
+        history: list[dict] | None = None,
+        extra_context: str | None = None,
+        brand_faq: str | None = None,
+    ) -> str:
+        """
+        Generate a response using OpenAI.
+
+        Args:
+            user_message: The user's message
+            history: Previous messages for context
+            extra_context: Additional context (e.g. repair data from sheets)
+
+        Returns:
+            The AI-generated response text
+        """
+        try:
+            # Construimos system_content con el bloque mas estable primero (favorece la cache de OpenAI):
+            # 1. SYSTEM_PROMPT (estatico, ~9k tokens)
+            # 2. FAQ general (estatico, ~2k tokens)
+            # 3. FAQ de marca (estatico por marca)
+            # 4. extra_context (variable: reparaciones/precios/citas)
+            # 5. CONTEXTO TEMPORAL (cambia cada minuto - va al final para no romper la cache)
+            system_content = settings.SYSTEM_PROMPT
+            if self._general_faq:
+                system_content += "\n\n" + self._general_faq
+            if brand_faq:
+                system_content += "\n\n[FAQ MARCA ESPECÍFICA]\n" + brand_faq
+            if extra_context:
+                system_content += "\n\n" + extra_context
+
+            fecha_actual, hora_actual = _now_madrid()
+            system_content += (
+                f"\n\n[CONTEXTO TEMPORAL]\n"
+                f"Fecha actual: {fecha_actual}\n"
+                f"Hora actual: {hora_actual}\n"
+                f"Zona horaria: Europe/Madrid"
+            )
+
+            messages = [{"role": "system", "content": system_content}]
+
+            # Add conversation history for context
+            if history:
+                for msg in history:
+                    messages.append({
+                        "role": msg["role"],
+                        "content": msg["content"],
+                    })
+
+            # Add the new user message
+            messages.append({"role": "user", "content": user_message})
+
+            # Call OpenAI API
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=700,
+                temperature=0.7,
+            )
+
+            reply = response.choices[0].message.content.strip()
+            reply = _strip_filler(reply)
+            logger.info(f"OpenAI response ({self.model}): {reply[:100]}...")
+            return reply
+
+        except Exception as e:
+            logger.error(f"OpenAI API error: {e}", exc_info=True)
+            return "Disculpa, estoy teniendo problemas técnicos. ¿Puedes intentar de nuevo en unos minutos?"
