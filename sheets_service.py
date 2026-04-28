@@ -334,19 +334,31 @@ class SheetsService:
             return []
 
     async def get_available_equipos(self) -> list[dict]:
-        """Return equipment that is active and not currently rented."""
+        """Return equipment that passes all availability filters:
+        activo=SI, estado=disponible, sin defectos, sin observaciones."""
         records = await self._fetch_all_equipos()
         available = []
         for r in records:
             activo = str(r.get("activo", "")).strip().lower()
             estado = str(r.get("estado", "")).strip().lower()
-            if activo in ("si", "sí", "1", "true", "yes", "s") and estado != "alquilado":
-                available.append({
-                    "marca": str(r.get("marca", "")).strip(),
-                    "modelo": str(r.get("modelo", "")).strip(),
-                    "sistema_operativo": str(r.get("sistema_operativo", "")).strip(),
-                    "caracteristicas": str(r.get("caracteristicas", "")).strip(),
-                })
+            defectos = str(r.get("defectos", "")).strip()
+            observaciones = str(r.get("observaciones", "")).strip()
+
+            if activo not in ("si", "sí", "1", "true", "yes", "s"):
+                continue
+            if estado != "disponible":
+                continue
+            if defectos:
+                continue
+            if observaciones:
+                continue
+
+            available.append({
+                "marca": str(r.get("marca", "")).strip(),
+                "modelo": str(r.get("modelo", "")).strip(),
+                "sistema_operativo": str(r.get("sistema_operativo", "")).strip(),
+                "caracteristicas": str(r.get("caracteristicas", "")).strip(),
+            })
         return available
 
     def format_equipos_for_prompt(self, equipos: list[dict]) -> str:
@@ -360,22 +372,26 @@ class SheetsService:
             )
 
         lines = ["[EQUIPOS DISPONIBLES PARA ALQUILER]"]
-        lines.append(f"Equipos disponibles actualmente: {len(equipos)}\n")
+        lines.append(f"Total equipos sin defectos y disponibles en stock: {len(equipos)}")
+        lines.append("(Lista interna — NO mostrar al cliente de golpe)\n")
 
         for i, e in enumerate(equipos, 1):
-            parts = [f"{i}. *{e['marca']} {e['modelo']}*"]
+            parts = [f"{i}. {e['marca']} {e['modelo']}"]
             if e["sistema_operativo"]:
                 parts.append(f"SO: {e['sistema_operativo']}")
             if e["caracteristicas"]:
-                parts.append(f"Características: {e['caracteristicas']}")
+                parts.append(e["caracteristicas"])
             lines.append(" | ".join(parts))
 
-        lines.append("\nINSTRUCCIONES EQUIPOS ALQUILER:")
-        lines.append("- Muestra solo los equipos listados. No inventes modelos ni especificaciones.")
-        lines.append("- Si el cliente busca un tipo (gaming, Mac, Windows, Surface), filtra y muestra los que correspondan.")
-        lines.append("- No menciones estados internos ni si un equipo está alquilado. Solo muestra los disponibles.")
-        lines.append("- Si ninguno coincide con lo que busca, díselo honestamente y muestra los disponibles.")
-        lines.append("- Recuerda siempre que la disponibilidad final la confirma un asistente.")
+        lines.append("\nINSTRUCCIONES OBLIGATORIAS — EQUIPOS ALQUILER:")
+        lines.append("❌ PROHIBIDO listar todos los equipos de golpe sin que el cliente haya especificado qué busca.")
+        lines.append("✅ FLUJO CORRECTO:")
+        lines.append("  1. Primero pregunta qué tipo de equipo necesita: ¿Windows, Mac, Surface, Gaming?")
+        lines.append("  2. Luego pregunta uso principal o requisitos: ¿para qué lo necesita? ¿RAM mínima, procesador, almacenamiento?")
+        lines.append("  3. Solo después filtra la lista interna y muestra máximo 3-4 opciones que encajen.")
+        lines.append("  4. Si ninguno encaja, díselo honestamente y ofrece lo más parecido disponible.")
+        lines.append("- No menciones estados, defectos ni datos internos. Solo marca, modelo, SO y características.")
+        lines.append("- La disponibilidad final siempre la confirma un asistente.")
 
         return "\n".join(lines)
 
