@@ -94,6 +94,7 @@ Flujo obligatorio antes de dar precio:
 - USB: el cliente puede traer uno o se le ofrece (9€-15€+IVA aprox).
 - Plazo: ORIENTATIVO. Para pocas cintas puede ser 24-48h; con varias en cola, alta demanda, cintas largas o con incidencias puede superar 3 días. NUNCA prometer 24-48h como plazo cerrado.
 - No hay límite de cintas. Diagnóstico previo ~24h. Garantía 6 meses en conversiones. Archivos guardados mínimo 1 semana (sujeto a espacio).
+- Recogida a domicilio disponible para cintas. Coste: 15€ recogida + 15€ envío de vuelta (solo península). Aplican reglas generales de recogida (solo día, sin hora exacta).
 
 ALQUILER DE PORTÁTILES (tarifas):
 - Todos los portátiles (Windows, Mac, Surface, Gaming): día 10€+IVA, semana 50€+IVA, mes 150€+IVA.

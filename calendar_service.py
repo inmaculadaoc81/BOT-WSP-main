@@ -297,7 +297,7 @@ class CalendarService:
             f"3. La recogida esta disponible para cualquier equipo que Kelatos atiende. Si hacemos diagnostico de ese equipo, hay recogida. No hay restriccion adicional por tipo.\n"
             f"4. Informar del coste: 15€ por equipo.\n"
             f"5. Para recogida, solo pedir el DIA preferido. No confirmar hora exacta.\n"
-            f"6. Si la solicitud se hace despues de las 13:00, solo puede programarse a partir del dia subsiguiente.\n"
+            f"6. Si la solicitud se hace despues de las 13:00, solo puede programarse a partir del dia subsiguiente (no el dia siguiente). Si el cliente pide 'mañana' y son mas de las 13:00, NO ofrecer mañana — ofrecer el siguiente dia laborable.\n"
             f"7. Cuando tengas TODOS los datos, muestra un RESUMEN para que el cliente confirme:\n"
             f"   '📋 *Resumen de tu recogida:*\n"
             f"   👤 Nombre: [nombre]\n"
@@ -307,11 +307,11 @@ class CalendarService:
             f"   💰 Coste: 15€\n"
             f"   ¿Es correcto?'\n"
             f"8. CUANDO EL CLIENTE CONFIRMA (dice si, correcto, ok, perfecto, dale, vale, etc.) tu respuesta DEBE contener SIEMPRE DOS PARTES (las dos, no una o la otra):\n"
-            f"   PARTE A (texto visible al cliente): 'Perfecto 😊 Estoy gestionando tu solicitud de recogida. Un tecnico se pondra en contacto contigo para confirmarla.'\n"
+            f"   PARTE A (texto visible al cliente): 'Perfecto 😊 Estoy gestionando tu solicitud de recogida. Un asistente de Kelatos se pondra en contacto contigo para gestionar el pago y confirmar todos los detalles.'\n"
             f"   PARTE B (linea de comando interna, en una linea aparte al final, el cliente NO la ve): CONFIRMAR_ENVIO|<datetime_iso>|<nombre_cliente>|<motivo>|<direccion>\n"
             f"   EJEMPLO completo de respuesta valida cuando el cliente dice 'si':\n"
             f"   ---\n"
-            f"   Perfecto 😊 Estoy gestionando tu solicitud de recogida. Un tecnico se pondra en contacto contigo para confirmarla.\n"
+            f"   Perfecto 😊 Estoy gestionando tu solicitud de recogida. Un asistente de Kelatos se pondra en contacto contigo para gestionar el pago y confirmar todos los detalles.\n"
             f"\n"
             f"   CONFIRMAR_ENVIO|2026-04-22T10:00:00+02:00|Carlo Gabriel|Dyson SV10 ruidos|Calle Blasco de Garay 61, 28015 Madrid\n"
             f"   ---\n"
@@ -602,12 +602,12 @@ async def process_ai_calendar_command(
                 f"✅ Tu recogida ha sido registrada para el {pretty_date}.\n"
                 f"El mensajero pasará por {command['address']}.\n"
                 f"Coste: 15€ por equipo.\n\n"
-                f"Un técnico se pondrá en contacto contigo para confirmar la recogida."
+                f"Un asistente de Kelatos se pondrá en contacto contigo para gestionar el pago y confirmar todos los detalles."
             )
         else:
             user_message = (
                 "Perfecto 😊 He recibido tu solicitud de recogida, pero ahora mismo no he podido registrarla automáticamente.\n"
-                "Un técnico se pondrá en contacto contigo para confirmarla."
+                "Un asistente de Kelatos se pondrá en contacto contigo para gestionar el pago y confirmar todos los detalles."
             )
 
     return user_message, created_event

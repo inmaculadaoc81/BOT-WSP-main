@@ -350,11 +350,19 @@ def get_outside_hours_message() -> str:
             day_name = WEEKDAY_NAMES[next_day.weekday()]
             when = f"el *{day_name} a las 9:30*"
 
+    # Solo pedir contacto los viernes (el local no abre hasta el lunes)
+    is_friday = now.weekday() == 4
+    if is_friday:
+        contact_line = (
+            "\n\nComo el local está cerrado hasta el lunes, si quieres puedes dejarme "
+            "tu *nombre* y *número de contacto* para llamarte en cuanto abramos. 😊"
+        )
+    else:
+        contact_line = "\n\nMientras tanto, puedo seguir ayudándote con cualquier consulta. 😊"
+
     return (
         f"🕐 En este momento estamos fuera de horario. Un compañero te atenderá "
-        f"{when}.\n\n"
-        f"Déjame tu *nombre* y *número de contacto* y te contactamos en cuanto abramos. "
-        f"Mientras tanto, puedo seguir ayudándote con cualquier consulta. 😊"
+        f"{when}.{contact_line}"
     )
 
 
