@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from openai import AsyncOpenAI
@@ -18,12 +18,62 @@ _MESES = [
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ]
 
+# Keep in sync with HOLIDAYS_2026 in main.py
+_HOLIDAYS = {
+    "01-01", "01-06", "04-02", "04-03", "05-01",
+    "08-15", "10-12", "11-02", "12-07", "12-08", "12-25",
+}
+
 
 def _now_madrid() -> tuple[str, str]:
     now = datetime.now(_MADRID_TZ)
     fecha = f"{_DIAS_SEMANA[now.weekday()]} {now.day} de {_MESES[now.month - 1]} de {now.year}"
     hora = now.strftime("%H:%M")
     return fecha, hora
+
+
+def _is_business_day(dt: datetime) -> bool:
+    return dt.weekday() < 5 and dt.strftime("%m-%d") not in _HOLIDAYS
+
+
+def _build_temporal_context() -> str:
+    now = datetime.now(_MADRID_TZ)
+    fecha = f"{_DIAS_SEMANA[now.weekday()]} {now.day} de {_MESES[now.month - 1]} de {now.year}"
+    hora = now.strftime("%H:%M")
+    mins = now.hour * 60 + now.minute
+
+    is_open = _is_business_day(now) and (9 * 60 + 30) <= mins < 18 * 60
+    estado = "ABIERTO" if is_open else "CERRADO"
+
+    # Compute next opening moment
+    if _is_business_day(now) and mins < 9 * 60 + 30:
+        proximo = "hoy a las 09:30"
+    else:
+        candidate = now + timedelta(days=1)
+        for _ in range(14):
+            if _is_business_day(candidate):
+                break
+            candidate += timedelta(days=1)
+        diff = (candidate.date() - now.date()).days
+        day_name = _DIAS_SEMANA[candidate.weekday()]
+        day_num = candidate.day
+        month_name = _MESES[candidate.month - 1]
+        if diff == 1:
+            proximo = f"mañana {day_name} {day_num} de {month_name} a las 09:30"
+        else:
+            proximo = f"el {day_name} {day_num} de {month_name} a las 09:30"
+
+    ctx = (
+        f"\n\n[CONTEXTO TEMPORAL]\n"
+        f"Fecha actual: {fecha}\n"
+        f"Hora actual: {hora}\n"
+        f"Zona horaria: Europe/Madrid\n"
+        f"Estado del local: {estado} (horario L-V 09:30-18:00)\n"
+        f"Próxima apertura: {proximo}\n"
+        f"IMPORTANTE: Usa ÚNICAMENTE estos datos para determinar el día y horario actual. "
+        f"NO calcules ni asumas días festivos ni días de la semana distintos a los indicados aquí."
+    )
+    return ctx
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +146,7 @@ class OpenAIService:
             if extra_context:
                 system_content += "\n\n" + extra_context
 
-            fecha_actual, hora_actual = _now_madrid()
-            system_content += (
-                f"\n\n[CONTEXTO TEMPORAL]\n"
-                f"Fecha actual: {fecha_actual}\n"
-                f"Hora actual: {hora_actual}\n"
-                f"Zona horaria: Europe/Madrid"
-            )
+            system_content += _build_temporal_context()
 
             messages = [{"role": "system", "content": system_content}]
 

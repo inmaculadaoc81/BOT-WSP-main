@@ -37,7 +37,10 @@ async def classify_intent(
         '- "needs_repair_lookup": true si el usuario pregunta por el estado de su reparación, '
         "seguimiento, resguardo, o un equipo que dejó para reparar.\n"
         '- "needs_prices": true si el usuario pregunta por precios, costes, cuánto cuesta, '
-        "tarifas, o información de precios de reparación.\n"
+        "tarifas, presupuesto, o información de precios de reparación. "
+        "También true si menciona una marca/modelo específico y pregunta qué le costaría arreglarlo, "
+        "qué precio tiene un servicio concreto, o cuánto vale una reparación o pieza. "
+        "En caso de duda, marcar true.\n"
         '- "wants_appointment": true SOLO si el usuario pide EXPLICITAMENTE agendar/reservar/programar/coger una cita, '
         "o pide que le recojan el equipo a domicilio (recogida, mensajero, que pasen a buscarlo). "
         "IMPORTANTE: marcar FALSE si el usuario solo dice que va a ir, va a pasar, va a llevar, "
@@ -94,6 +97,19 @@ async def classify_intent(
             result.brand = None
         elif result.brand:
             result.brand = result.brand.lower()
+
+        # Fallback: si el mensaje contiene palabras de precio y no se activó needs_prices, forzarlo.
+        # Cubre casos donde gpt-4o-mini clasifica como consulta de reparación pero no de precio.
+        if not result.needs_prices:
+            _PRICE_KEYWORDS = (
+                "precio", "coste", "cuesta", "cuanto", "cuánto",
+                "tarifa", "presupuesto", "vale", "cobran", "cobráis",
+                "reparación cuesta", "repair cost",
+            )
+            msg_lower = user_message.lower()
+            if any(kw in msg_lower for kw in _PRICE_KEYWORDS):
+                result.needs_prices = True
+                logger.info("needs_prices forced True via keyword fallback")
 
         return result
 
