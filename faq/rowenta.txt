@@ -6,7 +6,7 @@ QUÉ REPARAMOS DE ROWENTA:
 - NO reparamos otros productos Rowenta distintos a aspiradores.
 
 FILTROS ROWENTA:
-- Para localizar un filtro, pedir al cliente el modelo exacto o una foto de la pegatina del aparato.
+- Para localizar un filtro, pedir al cliente el modelo exacto. No pedir foto (el bot no puede verlas). Si no sabe el modelo, indicar que lo traiga al local.
 
 DIAGNÓSTICO ROWENTA:
 - De pago: 20€ + IVA (aspirador / robot aspirador).
@@ -15,5 +15,5 @@ RECOGIDA A DOMICILIO:
 - Sí disponible para aspiradores/robots Rowenta. Coste: 15€ recogida + 15€ envío de vuelta. Solo península.
 
 REGLAS:
-- No inventar disponibilidad de filtros sin modelo/foto.
+- No inventar disponibilidad de filtros sin modelo exacto.
 - No ofrecer reparación de centros de planchado.

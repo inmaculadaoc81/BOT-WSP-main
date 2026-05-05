@@ -12,4 +12,4 @@ RECOGIDA A DOMICILIO:
 
 REGLAS:
 - No dar precio de batería sin código de pieza.
-- Si el cliente no conoce el código, pedir foto de la pegatina de la batería o transferir a un compañero.
+- Si el cliente no conoce el código, indicar que lo traiga al local para identificarlo. No pedir foto (el bot no puede verlas).

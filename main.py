@@ -264,13 +264,17 @@ async def receive_message(request: Request):
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:
-            clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
-            handoff_msg = HANDOFF_MESSAGE if is_within_business_hours() else get_outside_hours_message()
-            full_msg = f"{clean_response}\n\n{handoff_msg}" if clean_response else handoff_msg
-            await db.save_message(sender, "assistant", full_msg)
-            await whatsapp_svc.send_message(to=sender, text=full_msg)
             if is_within_business_hours():
+                clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
+                full_msg = f"{clean_response}\n\n{HANDOFF_MESSAGE}" if clean_response else HANDOFF_MESSAGE
+                await db.save_message(sender, "assistant", full_msg)
+                await whatsapp_svc.send_message(to=sender, text=full_msg)
                 await _handle_handoff(sender)
+            else:
+                # Outside hours: discard "te transfiero" text, ask for contact instead
+                full_msg = get_outside_hours_message()
+                await db.save_message(sender, "assistant", full_msg)
+                await whatsapp_svc.send_message(to=sender, text=full_msg)
             return {"status": "handoff"}
 
         # Check if AI confirmed an appointment or pickup
@@ -350,12 +354,15 @@ def get_outside_hours_message() -> str:
             day_name = WEEKDAY_NAMES[next_day.weekday()]
             when = f"el *{day_name} a las 9:30*"
 
-    # Solo pedir contacto los viernes (el local no abre hasta el lunes)
-    is_friday = now.weekday() == 4
-    if is_friday:
+    # Pedir contacto si el siguiente día laborable es lunes (viernes noche, sábado o domingo).
+    # WhatsApp solo permite responder dentro de las 24h del último mensaje del cliente,
+    # por lo que si escribe el fin de semana, para el lunes puede haber vencido esa ventana.
+    next_day_is_monday = now.weekday() >= 4  # viernes=4, sábado=5, domingo=6
+    if next_day_is_monday:
         contact_line = (
-            "\n\nComo el local está cerrado hasta el lunes, si quieres puedes dejarme "
-            "tu *nombre* y *número de contacto* para llamarte en cuanto abramos. 😊"
+            "\n\nComo el local está cerrado hasta el lunes y WhatsApp solo permite responder "
+            "dentro de las 24h, te recomiendo que vuelvas a escribir el lunes por la mañana "
+            "o déjame tu *nombre* y *número de contacto* para llamarte en cuanto abramos. 😊"
         )
     else:
         contact_line = "\n\nMientras tanto, puedo seguir ayudándote con cualquier consulta. 😊"
@@ -736,13 +743,17 @@ async def chatwoot_webhook(request: Request):
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:
-            clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
-            handoff_msg = HANDOFF_MESSAGE if is_within_business_hours() else get_outside_hours_message()
-            full_msg = f"{clean_response}\n\n{handoff_msg}" if clean_response else handoff_msg
-            await db.save_message(sender_key, "assistant", full_msg)
-            await chatwoot_svc.send_message(conversation_id, full_msg)
             if is_within_business_hours():
+                clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
+                full_msg = f"{clean_response}\n\n{HANDOFF_MESSAGE}" if clean_response else HANDOFF_MESSAGE
+                await db.save_message(sender_key, "assistant", full_msg)
+                await chatwoot_svc.send_message(conversation_id, full_msg)
                 await _handle_handoff(sender_key, conversation_id=conversation_id)
+            else:
+                # Outside hours: discard "te transfiero" text, ask for contact instead
+                full_msg = get_outside_hours_message()
+                await db.save_message(sender_key, "assistant", full_msg)
+                await chatwoot_svc.send_message(conversation_id, full_msg)
             return {"status": "handoff"}
 
         # Check if AI confirmed an appointment or pickup

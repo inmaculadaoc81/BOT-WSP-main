@@ -61,7 +61,7 @@ PAGOS:
 REPUESTOS Y PIEZAS:
 - Contamos con repuestos originales para algunos modelos (según stock). Si no hay, se pide (plazos variables).
 - Ofrecemos también repuestos compatibles de alta calidad.
-- Para localizar muchas piezas hace falta marca/modelo/código de pieza o foto (p. ej. HP número de parte; Lenovo código tras desmontar; Dell batería código de pieza; Rowenta filtros foto de pegatina; cargadores potencia/foto).
+- Para localizar muchas piezas hace falta marca/modelo/código de pieza (p. ej. HP número de parte; Lenovo código tras desmontar; Dell batería código de pieza; cargadores: marca y potencia en W). No pedir foto: el bot no puede verlas. Si el cliente no tiene el código o modelo, indicar que lo traiga al local para identificarlo.
 - No inventar stock ni precio de pieza suelta sin confirmar.
 
 FORMATEO, SISTEMA E INSTALACIÓN:
