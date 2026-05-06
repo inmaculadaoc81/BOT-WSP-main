@@ -200,6 +200,10 @@ async def receive_message(request: Request):
             history=history,
         )
         logger.info(f"Intent for {sender}: {intent}")
+        logger.info(
+            f"[PRICES] needs_prices={intent.needs_prices} | "
+            f"PRICES_SHEET_ID_SET={bool(settings.GOOGLE_PRICES_SHEET_ID)}"
+        )
 
         # Handoff to human agent if requested
         if intent.needs_human:
@@ -679,6 +683,10 @@ async def chatwoot_webhook(request: Request):
             history=history,
         )
         logger.info(f"Intent for conversation {conversation_id}: {intent}")
+        logger.info(
+            f"[PRICES] needs_prices={intent.needs_prices} | "
+            f"PRICES_SHEET_ID_SET={bool(settings.GOOGLE_PRICES_SHEET_ID)}"
+        )
 
         # Handoff to human agent if requested
         if intent.needs_human:

@@ -204,19 +204,54 @@ class SheetsService:
             if not self._client:
                 return []
 
+        if not settings.GOOGLE_PRICES_SHEET_ID:
+            logger.error("GOOGLE_PRICES_SHEET_ID is not configured — prices will not be available")
+            return []
+
         try:
-            sheet = self._client.open_by_key(settings.GOOGLE_PRICES_SHEET_ID).worksheet("Precios")
-            # Header row is row 2 (row 1 is title)
+            spreadsheet = self._client.open_by_key(settings.GOOGLE_PRICES_SHEET_ID)
+
+            # Find the prices worksheet — try "Precios" first, then fall back to first sheet
+            available_tabs = [ws.title for ws in spreadsheet.worksheets()]
+            logger.info(f"Available tabs in prices spreadsheet: {available_tabs}")
+
+            tab_name = None
+            for candidate in ("Precios", "precios", "Prices", "prices", "Sheet1", "Hoja1"):
+                if candidate in available_tabs:
+                    tab_name = candidate
+                    break
+            if tab_name is None and available_tabs:
+                tab_name = available_tabs[0]
+                logger.warning(f"Tab 'Precios' not found — using first tab: '{tab_name}'")
+
+            sheet = spreadsheet.worksheet(tab_name)
             all_values = sheet.get_all_values()
-            headers = all_values[1]  # Row 2 = index 1
+
+            if not all_values:
+                logger.warning("Prices sheet is empty")
+                return []
+
+            # Auto-detect header row: find first row that looks like headers
+            # (contains at least one non-empty cell that isn't purely numeric)
+            header_row_idx = 0
+            for i, row in enumerate(all_values[:5]):
+                non_empty = [c.strip() for c in row if c.strip()]
+                if len(non_empty) >= 3:
+                    header_row_idx = i
+                    break
+
+            headers = all_values[header_row_idx]
+            logger.info(f"Price sheet headers (row {header_row_idx + 1}): {headers}")
+
             records = []
-            for row in all_values[3:]:
+            for row in all_values[header_row_idx + 1:]:
                 if any(cell.strip() for cell in row):
                     record = dict(zip(headers, row))
                     records.append(record)
+
             self._prices_cache = records
             self._prices_cache_time = time.time()
-            logger.info(f"Fetched {len(records)} price records from Google Sheets")
+            logger.info(f"Fetched {len(records)} price records from Google Sheets (tab: '{tab_name}')")
             return records
         except Exception as e:
             logger.error(f"Error fetching prices sheet: {e}", exc_info=True)
@@ -224,19 +259,35 @@ class SheetsService:
                 return self._prices_cache
             return []
 
+    def _get_field(self, record: dict, *candidates: str) -> str:
+        """Return first non-empty value from a list of possible column name candidates."""
+        for key in candidates:
+            val = str(record.get(key, "")).strip()
+            if val:
+                return val
+        return ""
+
     async def get_all_prices(self) -> list[dict]:
         """Get all price records."""
         records = await self._fetch_all_prices()
         prices = []
         for r in records:
             prices.append({
-                "categoria": str(r.get("Categoria", "")).strip(),
-                "marca": str(r.get("Marca", "")).strip(),
-                "modelo": str(r.get("Modelo", "")).strip(),
-                "tipo_reparacion": str(r.get("Tipo_Reparacion", "")).strip(),
-                "precio": str(r.get("Precio (S/)", "")).strip(),
-                "disponible": str(r.get("Disponible", "")).strip(),
+                "categoria": self._get_field(r, "Categoria", "Categoría", "categoria", "CATEGORIA"),
+                "marca": self._get_field(r, "Marca", "marca", "MARCA"),
+                "modelo": self._get_field(r, "Modelo", "modelo", "MODELO"),
+                "tipo_reparacion": self._get_field(
+                    r, "Tipo_Reparacion", "Tipo de Reparacion", "Tipo de Reparación",
+                    "Tipo Reparacion", "tipo_reparacion", "TipoReparacion", "Reparacion",
+                ),
+                "precio": self._get_field(
+                    r, "Precio (S/)", "Precio (€)", "Precio", "precio", "Price",
+                    "Precio EUR", "Precio (€ + IVA)", "Precio S/", "PRECIO",
+                ),
+                "disponible": self._get_field(r, "Disponible", "disponible", "DISPONIBLE", "Estado"),
             })
+        # Filter out rows with no marca and no tipo_reparacion (likely blank separator rows)
+        prices = [p for p in prices if p["marca"] or p["tipo_reparacion"]]
         return prices
 
     def format_prices_for_prompt(self, prices: list[dict]) -> str:
