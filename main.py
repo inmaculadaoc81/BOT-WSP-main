@@ -55,6 +55,7 @@ calendar_svc = CalendarService()
 APPOINTMENT_FLOW_MARKERS = (
     "Resumen de tu cita",
     "Resumen de tu recogida",
+    "Resumen de tu solicitud de alquiler",
     "¿Es correcto?",
 )
 

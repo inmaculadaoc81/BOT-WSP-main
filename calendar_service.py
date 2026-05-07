@@ -329,7 +329,7 @@ class CalendarService:
 
 def extract_confirmation_command(ai_response: str) -> dict | None:
     """
-    Busca una línea CONFIRMAR_CITA|... o CONFIRMAR_ENVIO|...
+    Busca una línea CONFIRMAR_CITA|..., CONFIRMAR_ENVIO|... o CONFIRMAR_ALQUILER|...
     y devuelve un dict con los datos.
     """
     if not ai_response:
@@ -367,6 +367,24 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
                 "raw_line": line,
             }
 
+        if line.startswith("CONFIRMAR_ALQUILER|"):
+            # Format: CONFIRMAR_ALQUILER|datetime_iso|nombre|tipo_equipo|duracion|modalidad|info_entrega
+            parts = line.split("|", 6)
+            if len(parts) != 7:
+                logger.warning("Formato inválido en CONFIRMAR_ALQUILER", extra={"line": line})
+                return None
+
+            return {
+                "type": "alquiler",
+                "datetime_iso": parts[1].strip(),
+                "customer_name": parts[2].strip(),
+                "tipo_equipo": parts[3].strip(),
+                "duracion": parts[4].strip(),
+                "modalidad": parts[5].strip(),
+                "info_entrega": parts[6].strip(),
+                "raw_line": line,
+            }
+
     return None
 
 
@@ -380,7 +398,11 @@ def strip_confirmation_command(ai_response: str) -> str:
     clean_lines = []
     for line in ai_response.splitlines():
         stripped = line.strip()
-        if stripped.startswith("CONFIRMAR_CITA|") or stripped.startswith("CONFIRMAR_ENVIO|"):
+        if (
+            stripped.startswith("CONFIRMAR_CITA|")
+            or stripped.startswith("CONFIRMAR_ENVIO|")
+            or stripped.startswith("CONFIRMAR_ALQUILER|")
+        ):
             continue
         clean_lines.append(line)
 
@@ -466,12 +488,24 @@ def _validate_appointment(
     except (ValueError, KeyError, TypeError):
         missing.append("fecha y hora valida")
 
-    # Direccion: solo obligatoria para envios.
+    # Direccion: solo obligatoria para envios y alquiler a domicilio.
     if command.get("type") == "envio":
         address = (command.get("address") or "").strip()
-        # Esperamos al menos calle + numero + ciudad/CP. Heuristica: 3+ palabras y al menos un digito.
         if not address or len(address.split()) < 3 or not any(c.isdigit() for c in address):
             missing.append("direccion completa (calle, numero, codigo postal y ciudad)")
+
+    if command.get("type") == "alquiler":
+        if not (command.get("tipo_equipo") or "").strip():
+            missing.append("tipo de equipo (Windows, Mac, Surface, Gaming)")
+        if not (command.get("duracion") or "").strip():
+            missing.append("duracion del alquiler")
+        modalidad = (command.get("modalidad") or "").strip().lower()
+        if not modalidad:
+            missing.append("modalidad de entrega (tienda o domicilio)")
+        elif "domicilio" in modalidad or "envio" in modalidad:
+            info = (command.get("info_entrega") or "").strip()
+            if not info or len(info.split()) < 3 or not any(c.isdigit() for c in info):
+                missing.append("direccion completa para el envio")
 
     return (len(missing) == 0, missing)
 
@@ -485,6 +519,8 @@ def _missing_data_message(command_type: str, missing: list[str]) -> str:
 
     if command_type == "envio":
         accion = "registrar la recogida"
+    elif command_type == "alquiler":
+        accion = "registrar tu solicitud de alquiler"
     else:
         accion = "registrar tu cita"
 
@@ -608,6 +644,39 @@ async def process_ai_calendar_command(
             user_message = (
                 "Perfecto 😊 He recibido tu solicitud de recogida, pero ahora mismo no he podido registrarla automáticamente.\n"
                 "Un asistente de Kelatos se pondrá en contacto contigo para gestionar el pago y confirmar todos los detalles."
+            )
+
+    elif command["type"] == "alquiler":
+        description = (
+            f"Tipo de equipo: {command['tipo_equipo']}\n"
+            f"Duración: {command['duracion']}\n"
+            f"Modalidad: {command['modalidad']}\n"
+            f"Entrega: {command['info_entrega']}\n"
+            f"Teléfono cliente: {attendee_phone}"
+        )
+        created_event = await calendar_service.create_event(
+            title=f"ALQUILER: {command['customer_name']} — {command['tipo_equipo']}",
+            start_iso=command["datetime_iso"],
+            duration_minutes=30,
+            description=description,
+            attendee_phone=attendee_phone,
+        )
+
+        if created_event:
+            user_message = (
+                f"✅ Tu solicitud de alquiler ha sido registrada.\n\n"
+                f"📋 *Resumen:*\n"
+                f"💻 Equipo: {command['tipo_equipo']}\n"
+                f"📅 Duración: {command['duracion']}\n"
+                f"🚚 Modalidad: {command['modalidad']}\n\n"
+                f"Un asistente de Kelatos se pondrá en contacto contigo para confirmar la disponibilidad, "
+                f"gestionar el pago y coordinar la entrega. ¡Gracias! 😊"
+            )
+        else:
+            user_message = (
+                "✅ Hemos recibido tu solicitud de alquiler.\n\n"
+                "Un asistente de Kelatos se pondrá en contacto contigo para confirmar la disponibilidad, "
+                "gestionar el pago y coordinar la entrega. ¡Gracias! 😊"
             )
 
     return user_message, created_event
