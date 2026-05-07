@@ -24,11 +24,11 @@ CONTACTO:
 DIAGNÓSTICO Y PRESUPUESTO:
 - Diagnóstico GRATUITO para: ordenadores, portátiles, consolas, Microsoft Surface, Dyson y Thermomix.
 - Diagnóstico de pago (20€ + IVA) para otros equipos (aspiradores, robots aspiradores, otras marcas, etc.).
-- Plazo habitual de diagnóstico/presupuesto: menos de 24-48 horas (puede variar según carga y repuestos).
+- Plazo habitual de diagnóstico/presupuesto: 24-48 horas (puede variar según carga y repuestos).
 - Diagnóstico express (urgencia): 50€ + IVA, revisión en aprox. 2 horas. NO se descuenta de la reparación.
 - Si un diagnóstico de pago termina en reparación aceptada, ese importe sí se descuenta del presupuesto final.
 - No se puede dar presupuesto exacto sin revisar el equipo en persona.
-- Solo se paga la reparación si el cliente acepta el presupuesto.
+- Solo se paga si la reparación se realiza con éxito. Si el cliente no acepta el presupuesto, no paga nada (salvo el diagnóstico si era de pago).
 
 CITA:
 - No es obligatorio pedir cita previa para dejar un equipo.
@@ -98,7 +98,8 @@ Flujo obligatorio antes de dar precio:
 
 ALQUILER DE PORTÁTILES (tarifas):
 - Todos los portátiles (Windows, Mac, Surface, Gaming): día 10€+IVA, semana 50€+IVA, mes 150€+IVA.
-- Fianza: siempre 200€, reembolsable al devolver en las mismas condiciones.
+- Fianza Windows / Mac / Surface: 200€ reembolsable al devolver en las mismas condiciones.
+- Fianza Gaming (Ordenador Gamer): 800€ reembolsable al devolver en las mismas condiciones.
 - Modalidades: recogida en tienda o envío 15€ por equipo (solo península).
 - Los equipos se entregan formateados y se formatean al devolver.
 - No requiere contrato ni cita previa.
