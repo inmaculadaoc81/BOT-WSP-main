@@ -272,7 +272,10 @@ class CalendarService:
             f"1. Datos necesarios: nombre completo + correo electronico + numero de telefono + motivo (equipo + problema).\n"
             f"2. Si falta alguno, pidelo antes de continuar.\n"
             f"3. Pregunta fecha y hora preferida.\n"
-            f"4. Las citas de diagnostico solo se pueden agendar de Lunes a Viernes entre 10:00 y 17:00 (ultimo slot a las 17:00).\n"
+            f"4. Las citas solo se pueden agendar de Lunes a Viernes entre las 10:00 y las 17:00. La hora MAXIMA es las 17:00. Ningun slot posterior a las 17:00 es valido.\n"
+            f"   ❌ EJEMPLOS DE HORAS RECHAZADAS: 17:30, 18:00, 05:30, cualquier hora antes de las 10:00 o despues de las 17:00.\n"
+            f"   Si el cliente pide 17:30 o cualquier hora despues de las 17:00 → decirle: 'Lo siento, la ultima cita disponible es a las 17:00. ¿Te viene bien esa hora u otra entre las 10:00 y las 17:00?'\n"
+            f"   ❌ NUNCA generes CONFIRMAR_CITA con una hora fuera del rango 10:00-17:00.\n"
             f"5. En cuanto el cliente proponga hora: verifica disponibilidad en SLOTS OCUPADOS (arriba). Si esta ocupado, dilo y ofrece alternativas ANTES de mostrar el resumen. Si es festivo de la lista oficial, indica que esta cerrado y pide otro dia.\n"
             f"6. Cuando tengas TODOS los datos Y el slot este libre, muestra un RESUMEN para que el cliente confirme:\n"
             f"   '📋 *Resumen de tu cita:*\n"
@@ -323,7 +326,14 @@ class CalendarService:
             f"- Cuando el cliente SI confirma, es OBLIGATORIO incluir la linea CONFIRMAR_CITA o CONFIRMAR_ENVIO. La linea es un comando interno que el sistema procesa para registrar la cita/recogida en Google Calendar. Si olvidas esa linea, la cita no se registra y el cliente se queda sin reserva.\n"
             f"- La linea CONFIRMAR siempre va al final, sola en su propia linea, separada por un salto de linea del resto del mensaje.\n"
             f"- No repitas el saludo inicial si ya estabas en la misma conversacion.\n"
-            f"- Fuera de horario puedes seguir respondiendo consultas informativas; solo aclara el horario si el cliente quiere ir, entregar, recoger o agendar."
+            f"- Fuera de horario puedes seguir respondiendo consultas informativas; solo aclara el horario si el cliente quiere ir, entregar, recoger o agendar.\n"
+            f"\n🚨 ALQUILER DE ORDENADORES — PROTOCOLO COMPLETAMENTE DIFERENTE:\n"
+            f"Los protocolos CITA y ENVIO de arriba son EXCLUSIVAMENTE para reparaciones y diagnosticos.\n"
+            f"Si el cliente quiere ALQUILAR un ordenador, NO uses el protocolo de cita ni el de envio.\n"
+            f"❌ NUNCA pidas 'motivo (equipo + problema)' para un alquiler. El alquiler no tiene motivo de reparacion.\n"
+            f"❌ NUNCA uses CONFIRMAR_CITA ni CONFIRMAR_ENVIO para un alquiler.\n"
+            f"✅ Para alquiler, sigue las instrucciones del SERVICIO DE ALQUILER DE ORDENADORES (PASOS 1-6) del sistema principal.\n"
+            f"✅ Para alquiler con envio a domicilio, usa CONFIRMAR_ALQUILER (distinto comando, distinto protocolo)."
         )
 
 
@@ -447,27 +457,35 @@ def _validate_appointment(
     """
     missing: list[str] = []
     history_text = _conversation_text(history)
+    cmd_type = command.get("type", "")
 
     # Nombre: el LLM lo emite en la linea CONFIRMAR; comprobamos que sea real.
     if not _is_real_name(command.get("customer_name", "")):
         missing.append("nombre completo del cliente")
 
-    # Motivo: tambien lo emite el LLM.
-    reason = (command.get("reason") or "").strip()
-    if not reason or len(reason) < 3:
-        missing.append("motivo (equipo + problema)")
+    # Motivo: solo para cita y envio (no para alquiler en tienda).
+    if cmd_type in ("cita", "envio"):
+        reason = (command.get("reason") or "").strip()
+        if not reason or len(reason) < 3:
+            missing.append("motivo (equipo + problema)")
 
-    # Email: tiene que estar en algun mensaje del cliente.
-    if not _EMAIL_RE.search(history_text):
-        missing.append("correo electronico")
+    # Para alquiler en tienda (walk-in): solo se necesita nombre.
+    # Para alquiler a domicilio: se necesitan también email, teléfono y dirección.
+    modalidad_alquiler = (command.get("modalidad") or "").strip().lower()
+    es_alquiler_tienda = cmd_type == "alquiler" and "tienda" in modalidad_alquiler
 
-    # Telefono: o ya lo tenemos del remitente o aparece en el historial.
-    has_phone = False
-    if sender_phone:
-        digits = re.sub(r"\D", "", sender_phone)
-        has_phone = len(digits) >= 9
-    if not has_phone and not _PHONE_RE.search(history_text):
-        missing.append("numero de telefono")
+    if not es_alquiler_tienda:
+        # Email: tiene que estar en algun mensaje del cliente.
+        if not _EMAIL_RE.search(history_text):
+            missing.append("correo electronico")
+
+        # Telefono: o ya lo tenemos del remitente o aparece en el historial.
+        has_phone = False
+        if sender_phone:
+            digits = re.sub(r"\D", "", sender_phone)
+            has_phone = len(digits) >= 9
+        if not has_phone and not _PHONE_RE.search(history_text):
+            missing.append("numero de telefono")
 
     # Fecha y hora: validar que sea futura y dentro del horario de citas.
     try:
@@ -482,9 +500,11 @@ def _validate_appointment(
         elif local.weekday() >= 5:
             missing.append("dia de lunes a viernes (no se atiende fines de semana)")
         elif command.get("type") == "cita":
-            # Solo citas exigen ventana 10:00-17:00 estrictamente.
-            if not (10 <= local.hour < 17 or (local.hour == 17 and local.minute == 0)):
-                missing.append("hora entre las 10:00 y las 17:00")
+            # Ventana estricta: 10:00 – 17:00 (último slot válido a las 17:00 exactas).
+            # Cualquier hora posterior a 17:00 (17:01, 17:30...) se rechaza.
+            total_mins = local.hour * 60 + local.minute
+            if not (10 * 60 <= total_mins <= 17 * 60):
+                missing.append("hora entre las 10:00 y las 17:00 (último slot a las 17:00 en punto)")
     except (ValueError, KeyError, TypeError):
         missing.append("fecha y hora valida")
 
@@ -669,14 +689,12 @@ async def process_ai_calendar_command(
                 f"💻 Equipo: {command['tipo_equipo']}\n"
                 f"📅 Duración: {command['duracion']}\n"
                 f"🚚 Modalidad: {command['modalidad']}\n\n"
-                f"Un asistente de Kelatos se pondrá en contacto contigo para confirmar la disponibilidad, "
-                f"gestionar el pago y coordinar la entrega. ¡Gracias! 😊"
+                f"Nos pondremos en contacto contigo lo antes posible para coordinar el pago y confirmar todos los detalles del envío. ¡Gracias! 😊"
             )
         else:
             user_message = (
                 "✅ Hemos recibido tu solicitud de alquiler.\n\n"
-                "Un asistente de Kelatos se pondrá en contacto contigo para confirmar la disponibilidad, "
-                "gestionar el pago y coordinar la entrega. ¡Gracias! 😊"
+                "Nos pondremos en contacto contigo lo antes posible para coordinar el pago y confirmar todos los detalles del envío. ¡Gracias! 😊"
             )
 
     return user_message, created_event
