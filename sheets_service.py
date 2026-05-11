@@ -423,6 +423,7 @@ class SheetsService:
             available.append({
                 "marca": str(r.get("marca", "")).strip(),
                 "modelo": str(r.get("modelo", "")).strip(),
+                "tipo": str(r.get("tipo", r.get("Tipo", r.get("TIPO", r.get("Categoria", r.get("categoria", "")))))).strip(),
                 "sistema_operativo": str(r.get("sistema_operativo", "")).strip(),
                 "caracteristicas": str(r.get("caracteristicas", "")).strip(),
             })
@@ -444,6 +445,8 @@ class SheetsService:
 
         for i, e in enumerate(equipos, 1):
             parts = [f"{i}. {e['marca']} {e['modelo']}"]
+            if e["tipo"]:
+                parts.append(f"Tipo: {e['tipo']}")
             if e["sistema_operativo"]:
                 parts.append(f"SO: {e['sistema_operativo']}")
             if e["caracteristicas"]:
@@ -459,6 +462,13 @@ class SheetsService:
         lines.append("  4. Si ninguno encaja, díselo honestamente y ofrece lo más parecido disponible.")
         lines.append("- No menciones estados, defectos ni datos internos. Solo marca, modelo, SO y características.")
         lines.append("- La disponibilidad final siempre la confirma un asistente.")
+        lines.append("\n⚠️ REGLA DE TIPO DE EQUIPO — OBLIGATORIO:")
+        lines.append("Cada equipo tiene un campo 'Tipo' (Portátil, Ordenador de mesa, etc.).")
+        lines.append("Si el cliente pide un tipo concreto (ej: 'portátiles', 'laptops', 'ordenadores de mesa'),")
+        lines.append("SOLO muestra equipos cuyo campo Tipo coincida con lo solicitado.")
+        lines.append("❌ NUNCA ofrezcas un Ordenador de mesa cuando el cliente pide portátil, ni viceversa.")
+        lines.append("❌ Si no hay equipos del tipo solicitado, dilo claramente: 'Actualmente no tenemos [tipo] disponibles.'")
+        lines.append("  No ofrezcas otro tipo como sustituto sin antes informar que no hay del tipo pedido.")
 
         return "\n".join(lines)
 
