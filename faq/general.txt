@@ -89,10 +89,12 @@ Flujo obligatorio antes de dar precio:
   1. Preguntar qué formato de cinta tiene.
   2. Preguntar cuántas cintas desea convertir.
   3. Solo después dar precio.
-- Formatos: VHS, Beta, Vídeo8, MiniDV/HDV.
+- Formatos SOPORTADOS: VHS, Beta (Betamax, formato doméstico), Vídeo8, MiniDV/HDV.
+- ❌ Betacam NO se convierte. Betacam es un formato profesional de radiodifusión y no disponemos de la máquina. NO confundir con Beta/Betamax (doméstico) que sí se convierte.
 - Precios: 1-4 cintas: 15€+IVA/cinta. 5-9: 12€+IVA/cinta. 10 o más: 10€+IVA/cinta.
 - USB: el cliente puede traer uno o se le ofrece (9€-15€+IVA aprox).
 - Plazo: ORIENTATIVO. Para pocas cintas puede ser 24-48h; con varias en cola, alta demanda, cintas largas o con incidencias puede superar 3 días. NUNCA prometer 24-48h como plazo cerrado.
+- ENTREGAS Y RECOGIDAS: SOLO de lunes a viernes en horario de apertura. NUNCA indicar que el equipo/cintas estarán listos para recoger en sábado, domingo o festivo. Si el plazo estimado cae en fin de semana o festivo, indicar el siguiente día laborable.
 - No hay límite de cintas. Diagnóstico previo ~24h. Garantía 6 meses en conversiones. Archivos guardados mínimo 1 semana (sujeto a espacio).
 - Recogida a domicilio disponible para cintas. Coste: 15€ recogida + 15€ envío de vuelta (solo península). Aplican reglas generales de recogida (solo día, sin hora exacta).
 
