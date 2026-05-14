@@ -13,6 +13,15 @@ logger = logging.getLogger(__name__)
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 MADRID_TZ = ZoneInfo("Europe/Madrid")
 
+# Keep in sync with HOLIDAYS_2026 in main.py and _HOLIDAYS in openai_service.py
+_HOLIDAYS = {
+    # Nacionales
+    "01-01", "01-06", "04-02", "04-03", "05-01",
+    "08-15", "10-12", "11-02", "12-07", "12-08", "12-25",
+    # Madrid
+    "05-02", "05-15", "11-09",
+}
+
 # Validaciones de datos para citas/recogidas (sanity checks que el LLM puede saltarse).
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 _PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d\s().-]{7,}\d)(?!\d)")
@@ -251,6 +260,11 @@ class CalendarService:
             f"  Nacionales: 1 enero, 6 enero, 3 abril (Viernes Santo), 1 mayo, 15 agosto, 12 octubre, 2 noviembre, 7 diciembre, 8 diciembre, 25 diciembre.\n"
             f"  Madrid: 2 mayo, 15 mayo, 9 noviembre.\n"
             f"❌ El 30 de abril NO es festivo en 2026. Cualquier fecha fuera de la lista anterior es laborable.\n"
+            f"\n🚨 RESPUESTA INMEDIATA A FECHA FESTIVA:\n"
+            f"Si el cliente menciona una fecha que es festivo (de la lista anterior), responde DE INMEDIATO en ese mismo mensaje:\n"
+            f"  '❌ El [fecha] es festivo y permanecemos cerrados. ¿Qué otro día te viene bien? Podemos atenderte cualquier día laborable de lunes a viernes.'\n"
+            f"NO esperes a recoger más datos. NO sigas con el flujo de cita. Primero corrige la fecha, luego continúa.\n"
+            f"Ejemplo: cliente dice 'quiero cita el 15 de mayo' → responder inmediatamente que es festivo y pedir otra fecha.\n"
             f"\n🚨 DIFERENCIA CRITICA — LEE ANTES DE ACTUAR:\n"
             f"\nHay TRES situaciones distintas. NO las confundas:\n"
             f"\n1. WALK-IN (DEFAULT — el cliente solo quiere venir al local sin agendar):\n"
@@ -499,6 +513,8 @@ def _validate_appointment(
             missing.append("fecha y hora futura (la indicada ya paso)")
         elif local.weekday() >= 5:
             missing.append("dia de lunes a viernes (no se atiende fines de semana)")
+        elif local.strftime("%m-%d") in _HOLIDAYS:
+            missing.append(f"dia laborable (el {local.strftime('%d/%m')} es festivo, no se atiende)")
         elif command.get("type") == "cita":
             # Ventana estricta: 10:00 – 17:00 (último slot válido a las 17:00 exactas).
             # Cualquier hora posterior a 17:00 (17:01, 17:30...) se rechaza.
