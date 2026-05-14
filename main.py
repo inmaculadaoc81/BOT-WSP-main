@@ -313,8 +313,11 @@ HANDOFF_MESSAGE = (
 
 # Spanish holidays 2026 (update yearly)
 HOLIDAYS_2026 = {
+    # Nacionales
     "01-01", "01-06", "04-02", "04-03", "05-01",
     "08-15", "10-12", "11-02", "12-07", "12-08", "12-25",
+    # Madrid
+    "05-02", "05-15", "11-09",
 }
 
 WEEKDAY_NAMES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
