@@ -56,6 +56,7 @@ APPOINTMENT_FLOW_MARKERS = (
     "Resumen de tu cita",
     "Resumen de tu recogida",
     "Resumen de tu solicitud de alquiler",
+    "Resumen de tu envío de vuelta",
     "¿Es correcto?",
 )
 

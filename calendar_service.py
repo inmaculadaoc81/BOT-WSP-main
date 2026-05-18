@@ -409,6 +409,22 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
                 "raw_line": line,
             }
 
+        if line.startswith("CONFIRMAR_DEVOLUCION|"):
+            # Format: CONFIRMAR_DEVOLUCION|datetime_iso|nombre|direccion|resguardo
+            parts = line.split("|", 4)
+            if len(parts) != 5:
+                logger.warning("Formato inválido en CONFIRMAR_DEVOLUCION", extra={"line": line})
+                return None
+
+            return {
+                "type": "devolucion",
+                "datetime_iso": parts[1].strip(),
+                "customer_name": parts[2].strip(),
+                "address": parts[3].strip(),
+                "resguardo": parts[4].strip(),
+                "raw_line": line,
+            }
+
     return None
 
 
@@ -426,6 +442,7 @@ def strip_confirmation_command(ai_response: str) -> str:
             stripped.startswith("CONFIRMAR_CITA|")
             or stripped.startswith("CONFIRMAR_ENVIO|")
             or stripped.startswith("CONFIRMAR_ALQUILER|")
+            or stripped.startswith("CONFIRMAR_DEVOLUCION|")
         ):
             continue
         clean_lines.append(line)
@@ -524,8 +541,8 @@ def _validate_appointment(
     except (ValueError, KeyError, TypeError):
         missing.append("fecha y hora valida")
 
-    # Direccion: solo obligatoria para envios y alquiler a domicilio.
-    if command.get("type") == "envio":
+    # Direccion: obligatoria para envios, devoluciones y alquiler a domicilio.
+    if command.get("type") in ("envio", "devolucion"):
         address = (command.get("address") or "").strip()
         if not address or len(address.split()) < 3 or not any(c.isdigit() for c in address):
             missing.append("direccion completa (calle, numero, codigo postal y ciudad)")
@@ -555,6 +572,8 @@ def _missing_data_message(command_type: str, missing: list[str]) -> str:
 
     if command_type == "envio":
         accion = "registrar la recogida"
+    elif command_type == "devolucion":
+        accion = "registrar el envío de vuelta"
     elif command_type == "alquiler":
         accion = "registrar tu solicitud de alquiler"
     else:
@@ -656,7 +675,7 @@ async def process_ai_calendar_command(
 
     elif command["type"] == "envio":
         created_event = await calendar_service.create_event(
-            title=f"ENVIO: {command['customer_name']}",
+            title=f"RECOGIDA: {command['customer_name']}",
             start_iso=command["datetime_iso"],
             duration_minutes=30,
             description=f"{command['reason']}\nDirección: {command['address']}",
@@ -711,6 +730,33 @@ async def process_ai_calendar_command(
             user_message = (
                 "✅ Hemos recibido tu solicitud de alquiler.\n\n"
                 "Nos pondremos en contacto contigo lo antes posible para coordinar el pago y confirmar todos los detalles del envío. ¡Gracias! 😊"
+            )
+
+    elif command["type"] == "devolucion":
+        resguardo_info = f"\nNº Resguardo: {command['resguardo']}" if command.get("resguardo") else ""
+        description = (
+            f"Dirección de envío: {command['address']}"
+            f"{resguardo_info}\n"
+            f"Teléfono cliente: {attendee_phone}"
+        )
+        created_event = await calendar_service.create_event(
+            title=f"ENVIO: {command['customer_name']}",
+            start_iso=command["datetime_iso"],
+            duration_minutes=30,
+            description=description,
+            attendee_phone=attendee_phone,
+        )
+
+        if created_event:
+            user_message = (
+                f"✅ Tu solicitud de envío ha sido registrada.\n\n"
+                f"📦 El equipo se enviará a: {command['address']}\n\n"
+                f"Un asistente de Kelatos se pondrá en contacto contigo para gestionar el pago y coordinar el envío. ¡Gracias! 😊"
+            )
+        else:
+            user_message = (
+                "✅ Hemos recibido tu solicitud de envío.\n\n"
+                "Un asistente de Kelatos se pondrá en contacto contigo para gestionar el pago y coordinar el envío. ¡Gracias! 😊"
             )
 
     return user_message, created_event
