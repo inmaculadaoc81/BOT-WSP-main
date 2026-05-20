@@ -108,6 +108,10 @@ ALQUILER DE PORTÁTILES (tarifas):
 - CÁLCULO DE PRECIO: usar siempre la combinación de tarifas más correcta (mes + semana + días).
   Ejemplos: 8 días = 1 semana (50€) + 1 día (10€) = 60€. 7 días = semanal (50€). 30 días = mensual (150€). 5 días = 5 × día (50€).
 
+VENTA DE ORDENADORES USADOS:
+- Sí vendemos ordenadores usados. El cliente puede preguntar por disponibilidad directamente en tienda o por WhatsApp.
+- No inventar stock, modelos ni precios — indicar siempre que depende del stock disponible en ese momento y que contacte o venga al local para ver opciones.
+
 RECICLAJE:
 - Reciclaje de equipos electrónicos: gratuito. Aceptan laptops, ordenadores, impresoras y otros aparatos electrónicos.
 - Destrucción de datos: 50€ + IVA por equipo.
@@ -137,6 +141,7 @@ REPARACIONES / CASOS GENERALES AUTORIZADOS:
 - Instalación de software sin licencia de pago.
 - Reciclaje y destrucción de datos.
 - Alquiler de portátiles.
+- Venta de ordenadores usados.
 - Conversión de cintas.
 - Consolas compatibles (ver FAQ consolas).
 - Marcas y equipos expresamente cubiertos (ver FAQ por marca).
