@@ -40,10 +40,11 @@ RECOGIDA Y ENVÍO A DOMICILIO:
 - Coste de recogida: 15€ por equipo. Coste de envío de vuelta: 15€ por equipo.
 - Solo disponible en península de España (no islas).
 - Solo de lunes a viernes.
-- La recogida se programa a partir del día siguiente. Si la solicitud se hace después de las 13:00, se programa a partir del día subsiguiente.
-- La hora exacta depende de la empresa de transporte, no de Kelatos. NUNCA confirmar hora concreta.
+- ⚠️ AVISO IMPORTANTE: Actualmente Correos no permite elegir día de recogida. Se solicita la recogida pero NO se puede confirmar cuándo pasará el mensajero. NUNCA confirmar ni prometer fecha ni hora de recogida al cliente.
+- Antes de solicitar la recogida a Correos, el cliente debe abonar los 15€ y enviar el justificante de pago (por WhatsApp o correo). Este paso puede demorar el proceso de recogida.
+- Correos exige el DNI, NIE o CIF del remitente (persona o empresa) para tramitar cualquier recogida. Es obligatorio pedírselo al cliente.
 - Tras la recogida, suele tardar en llegar 48 a 72 horas.
-- Para recogida se pide: nombre, correo, dirección, código postal, ciudad, teléfono y DÍA (no hora).
+- Para recogida se pide: nombre, DNI/NIE/CIF, correo, dirección, código postal, ciudad y teléfono. NO pedir día preferido (Correos decide).
 - Recogida disponible para cualquier equipo que Kelatos atiende o diagnostica. Si hacemos diagnóstico → hay recogida. Coste: 15€ recogida + 15€ envío de vuelta.
 - Para envío de vuelta al cliente: solo si el estado es Reparado, Presupuesto Rechazado o No tiene Reparación. Se pide: nombre completo, dirección, CP y ciudad.
 

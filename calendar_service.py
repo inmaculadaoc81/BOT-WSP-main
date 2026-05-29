@@ -309,30 +309,30 @@ class CalendarService:
             f"   ---\n"
             f"8. NUNCA omitir la linea CONFIRMAR_CITA al confirmar. Sin esa linea, la cita NO se registra en el sistema.\n"
             f"\nPROTOCOLO DE ENVIO (mensajero recoge a domicilio):\n"
-            f"1. Datos necesarios: nombre completo + correo electronico + numero de telefono + motivo (equipo + problema) + direccion completa (calle, numero, CP, ciudad).\n"
-            f"2. Si falta alguno, pidelo antes de continuar.\n"
+            f"1. Datos necesarios: nombre completo + DNI/NIE/CIF + correo electronico + numero de telefono + motivo (equipo + problema) + direccion completa (calle, numero, CP, ciudad).\n"
+            f"2. Si falta alguno, pidelo antes de continuar. El DNI/NIE/CIF es obligatorio: Correos lo exige para tramitar la recogida.\n"
             f"3. La recogida esta disponible para cualquier equipo que Kelatos atiende. Si hacemos diagnostico de ese equipo, hay recogida. No hay restriccion adicional por tipo.\n"
-            f"4. Informar del coste: 15€ por equipo.\n"
-            f"5. Para recogida, solo pedir el DIA preferido. No confirmar hora exacta.\n"
-            f"6. Si la solicitud se hace despues de las 13:00, solo puede programarse a partir del dia subsiguiente (no el dia siguiente). Si el cliente pide 'mañana' y son mas de las 13:00, NO ofrecer mañana — ofrecer el siguiente dia laborable.\n"
-            f"7. Cuando tengas TODOS los datos, muestra un RESUMEN para que el cliente confirme:\n"
-            f"   '📋 *Resumen de tu recogida:*\n"
+            f"4. Informar del coste: 15€ por equipo. IMPORTANTE: el cliente debe abonar los 15€ ANTES de que se tramite la recogida con Correos, y enviar el justificante de pago por WhatsApp o correo. Este paso puede demorar el proceso.\n"
+            f"5. ⚠️ AVISO CORREOS: Actualmente Correos NO permite elegir dia de recogida. Se solicita pero NO se puede confirmar cuándo pasará el mensajero. NO pidas dia preferido. NO prometas ni confirmes fechas ni horas de recogida al cliente.\n"
+            f"6. Cuando tengas TODOS los datos, muestra un RESUMEN para que el cliente confirme:\n"
+            f"   '📋 *Resumen de tu solicitud de recogida:*\n"
             f"   👤 Nombre: [nombre]\n"
+            f"   🪪 DNI/NIE/CIF: [dni_nie_cif]\n"
             f"   🔧 Motivo: [equipo + problema]\n"
             f"   📍 Direccion: [direccion completa]\n"
-            f"   📅 Fecha: [fecha]\n"
-            f"   💰 Coste: 15€\n"
+            f"   💰 Coste: 15€ (abono previo requerido antes de tramitar)\n"
+            f"   📅 Fecha de recogida: pendiente — Correos no permite elegir dia\n"
             f"   ¿Es correcto?'\n"
-            f"8. CUANDO EL CLIENTE CONFIRMA (dice si, correcto, ok, perfecto, dale, vale, etc.) tu respuesta DEBE contener SIEMPRE DOS PARTES (las dos, no una o la otra):\n"
-            f"   PARTE A (texto visible al cliente): 'Perfecto 😊 Estoy gestionando tu solicitud de recogida. Un asistente de Kelatos se pondra en contacto contigo para gestionar el pago y confirmar todos los detalles.'\n"
-            f"   PARTE B (linea de comando interna, en una linea aparte al final, el cliente NO la ve): CONFIRMAR_ENVIO|<datetime_iso>|<nombre_cliente>|<motivo>|<direccion>\n"
+            f"7. CUANDO EL CLIENTE CONFIRMA (dice si, correcto, ok, perfecto, dale, vale, etc.) tu respuesta DEBE contener SIEMPRE DOS PARTES (las dos, no una o la otra):\n"
+            f"   PARTE A (texto visible al cliente): 'Perfecto 😊 Hemos registrado tu solicitud de recogida. Para poder tramitarla con Correos, recuerda realizar el abono de los 15€ y enviarnos el justificante de pago por WhatsApp o correo. Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, por lo que no podemos confirmarte una fecha exacta de momento. Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles.'\n"
+            f"   PARTE B (linea de comando interna, en una linea aparte al final, el cliente NO la ve): CONFIRMAR_ENVIO|<datetime_iso>|<nombre_cliente>|<motivo>|<direccion>|<dni_nie_cif>\n"
             f"   EJEMPLO completo de respuesta valida cuando el cliente dice 'si':\n"
             f"   ---\n"
-            f"   Perfecto 😊 Estoy gestionando tu solicitud de recogida. Un asistente de Kelatos se pondra en contacto contigo para gestionar el pago y confirmar todos los detalles.\n"
+            f"   Perfecto 😊 Hemos registrado tu solicitud de recogida. Para poder tramitarla con Correos, recuerda realizar el abono de los 15€ y enviarnos el justificante de pago por WhatsApp o correo. Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, por lo que no podemos confirmarte una fecha exacta de momento. Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles.\n"
             f"\n"
-            f"   CONFIRMAR_ENVIO|2026-04-22T10:00:00+02:00|Carlo Gabriel|Dyson SV10 ruidos|Calle Blasco de Garay 61, 28015 Madrid\n"
+            f"   CONFIRMAR_ENVIO|2026-04-22T10:00:00+02:00|Carlo Gabriel|Dyson SV10 ruidos|Calle Blasco de Garay 61, 28015 Madrid|12345678A\n"
             f"   ---\n"
-            f"9. NUNCA omitir la linea CONFIRMAR_ENVIO al confirmar. Sin esa linea, la recogida NO se registra en el sistema.\n"
+            f"8. NUNCA omitir la linea CONFIRMAR_ENVIO al confirmar. Sin esa linea, la recogida NO se registra en el sistema.\n"
             f"\nIMPORTANTE:\n"
             f"- NUNCA generes CONFIRMAR_CITA ni CONFIRMAR_ENVIO sin mostrar primero el resumen y recibir confirmacion explicita del cliente.\n"
             f"- Si el cliente dice que algun dato es incorrecto, corrigelo y muestra el resumen de nuevo.\n"
@@ -377,8 +377,8 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
             }
 
         if line.startswith("CONFIRMAR_ENVIO|"):
-            parts = line.split("|", 4)
-            if len(parts) != 5:
+            parts = line.split("|", 5)
+            if len(parts) not in (5, 6):
                 logger.warning("Formato inválido en CONFIRMAR_ENVIO", extra={"line": line})
                 return None
 
@@ -388,6 +388,7 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
                 "customer_name": parts[2].strip(),
                 "reason": parts[3].strip(),
                 "address": parts[4].strip(),
+                "dni_nie_cif": parts[5].strip() if len(parts) == 6 else "",
                 "raw_line": line,
             }
 
@@ -547,6 +548,12 @@ def _validate_appointment(
         if not address or len(address.split()) < 3 or not any(c.isdigit() for c in address):
             missing.append("direccion completa (calle, numero, codigo postal y ciudad)")
 
+    # DNI/NIE/CIF: obligatorio para envios (lo exige Correos).
+    if command.get("type") == "envio":
+        dni = (command.get("dni_nie_cif") or "").strip()
+        if not dni or len(dni) < 7:
+            missing.append("DNI, NIE o CIF del remitente (lo exige Correos para tramitar la recogida)")
+
     if command.get("type") == "alquiler":
         if not (command.get("tipo_equipo") or "").strip():
             missing.append("tipo de equipo (Windows, Mac, Surface, Gaming)")
@@ -674,31 +681,32 @@ async def process_ai_calendar_command(
             )
 
     elif command["type"] == "envio":
+        dni_info = f"\nDNI/NIE/CIF: {command['dni_nie_cif']}" if command.get("dni_nie_cif") else ""
         created_event = await calendar_service.create_event(
             title=f"RECOGIDA: {command['customer_name']}",
             start_iso=command["datetime_iso"],
             duration_minutes=30,
-            description=f"{command['reason']}\nDirección: {command['address']}",
+            description=f"{command['reason']}\nDirección: {command['address']}{dni_info}",
             attendee_phone=attendee_phone,
         )
 
         if created_event:
-            start_dt = datetime.fromisoformat(command["datetime_iso"])
-            if start_dt.tzinfo is None:
-                start_dt = start_dt.replace(tzinfo=MADRID_TZ)
-
-            pretty_date = start_dt.astimezone(MADRID_TZ).strftime("%d/%m/%Y")
-
             user_message = (
-                f"✅ Tu recogida ha sido registrada para el {pretty_date}.\n"
-                f"El mensajero pasará por {command['address']}.\n"
-                f"Coste: 15€ por equipo.\n\n"
-                f"Un asistente de Kelatos se pondrá en contacto contigo para gestionar el pago y confirmar todos los detalles."
+                f"✅ Hemos registrado tu solicitud de recogida.\n\n"
+                f"⚠️ *Importante:* para poder tramitarla con Correos, recuerda realizar el abono de los 15€ "
+                f"y enviarnos el justificante de pago por WhatsApp o correo.\n\n"
+                f"Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, "
+                f"por lo que no podemos confirmarte una fecha exacta de momento.\n\n"
+                f"Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles."
             )
         else:
             user_message = (
-                "Perfecto 😊 He recibido tu solicitud de recogida, pero ahora mismo no he podido registrarla automáticamente.\n"
-                "Un asistente de Kelatos se pondrá en contacto contigo para gestionar el pago y confirmar todos los detalles."
+                "✅ Hemos recibido tu solicitud de recogida.\n\n"
+                "⚠️ *Importante:* para poder tramitarla con Correos, recuerda realizar el abono de los 15€ "
+                "y enviarnos el justificante de pago por WhatsApp o correo.\n\n"
+                "Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, "
+                "por lo que no podemos confirmarte una fecha exacta de momento.\n\n"
+                "Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles."
             )
 
     elif command["type"] == "alquiler":
