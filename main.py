@@ -161,9 +161,27 @@ async def receive_message(request: Request):
         # Only handle text messages for now
         if msg_type != "text":
             logger.info(f"Ignoring non-text message type: {msg_type}")
+            if msg_type in ("image", "video"):
+                response_text = (
+                    "¡Gracias por tu mensaje! 😊 Entiendo que quieres enviarnos fotos o videos, "
+                    "pero lamentablemente no nos es posible realizar un diagnóstico técnico preciso "
+                    "únicamente a través de imágenes o videos.\n\n"
+                    "Para que nuestros técnicos puedan evaluar correctamente tu equipo, necesitamos "
+                    "tenerlo físicamente en el local. 🔧\n\n"
+                    "Lo bueno es que:\n"
+                    "✅ El diagnóstico es *GRATUITO* para la mayoría de equipos (ordenadores, portátiles, "
+                    "consolas, Surface, Dyson, Thermomix...)\n"
+                    "✅ Para otros equipos tiene un coste de *20€ + IVA*, que se descuenta si decides reparar 💶\n\n"
+                    "📌 Puedes traerlo directamente al local 🏪 sin cita previa (L-V 09:30-18:00), "
+                    "o si lo prefieres, podemos ir a buscarlo con nuestro *servicio de recogida a domicilio* 🚚 "
+                    "(15€ recogida + 15€ envío de vuelta, solo península).\n\n"
+                    "¿Te gustaría agendar una recogida o tienes alguna pregunta? 😊"
+                )
+            else:
+                response_text = "Por ahora solo puedo leer mensajes de texto. 😊"
             await whatsapp_svc.send_message(
                 to=sender,
-                text="Por ahora solo puedo leer mensajes de texto. 😊",
+                text=response_text,
             )
             return {"status": "non-text ignored"}
 
