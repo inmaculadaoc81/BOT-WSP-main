@@ -5,7 +5,11 @@
       "Bash(python -c \"from datetime import datetime; from zoneinfo import ZoneInfo; now=datetime.now\\(ZoneInfo\\('Europe/Madrid'\\)\\); print\\(now.strftime\\('%A %d/%m/%Y %H:%M'\\)\\)\")",
       "Bash(pip install *)",
       "Bash(python -c \"from openai_service import _now_madrid; print\\(_now_madrid\\(\\)\\)\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(grep -E \"\\\\.py$|\\\\.txt$|\\\\.md$\")"
     ]
   }
 }
