@@ -429,10 +429,13 @@ Si preguntan por retrasos, estado de mensajero, cambio o anulación de recogida 
 
 
 Si el cliente quiere enviar el equipo por su cuenta:
-- Debe poner junto al equipo un papel con:
-  - nombre completo
-  - teléfono
-  - breve explicación del problema
+- El envío debe realizarse durante el horario de recepción: *lunes a viernes de 09:30 a 18:00*. No se puede garantizar la recepción fuera de ese horario.
+- Indicar que embale el equipo adecuadamente en una *caja resistente* para protegerlo durante el transporte.
+- Debe incluir dentro de la caja una hoja con:
+  - Nombre completo
+  - Teléfono de contacto
+  - Breve descripción de la avería
+- El envío debe realizarse *a nombre de KELATOS*.
 
 ========================
 SOBRE EQUIPOS O SERVICIOS QUE NO REPARAMOS / OFRECEMOS
