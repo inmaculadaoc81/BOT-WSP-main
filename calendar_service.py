@@ -318,19 +318,28 @@ class CalendarService:
             f"   '📋 *Resumen de tu solicitud de recogida:*\n"
             f"   👤 Nombre: [nombre]\n"
             f"   🪪 DNI/NIE/CIF: [dni_nie_cif]\n"
+            f"   📧 Email: [correo electronico]\n"
             f"   🔧 Motivo: [equipo + problema]\n"
             f"   📍 Direccion: [direccion completa]\n"
-            f"   💰 Coste: 15€ (abono previo requerido antes de tramitar)\n"
-            f"   📅 Fecha de recogida: pendiente — Correos no permite elegir dia\n"
+            f"   💰 Coste: 15€ recogida + 15€ envio de vuelta (abono previo requerido antes de tramitar)\n"
+            f"   _Correos no permite elegir fecha ni hora concreta de recogida. La fecha la asigna Correos una vez tramitada._\n"
             f"   ¿Es correcto?'\n"
             f"7. CUANDO EL CLIENTE CONFIRMA (dice si, correcto, ok, perfecto, dale, vale, etc.) tu respuesta DEBE contener SIEMPRE DOS PARTES (las dos, no una o la otra):\n"
-            f"   PARTE A (texto visible al cliente): 'Perfecto 😊 Hemos registrado tu solicitud de recogida. Para poder tramitarla con Correos, recuerda realizar el abono de los 15€ y enviarnos el justificante de pago por WhatsApp o correo. Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, por lo que no podemos confirmarte una fecha exacta de momento. Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles.'\n"
-            f"   PARTE B (linea de comando interna, en una linea aparte al final, el cliente NO la ve): CONFIRMAR_ENVIO|<datetime_iso>|<nombre_cliente>|<motivo>|<direccion>|<dni_nie_cif>\n"
+            f"   PARTE A (texto visible al cliente): '✅ ¡Solicitud registrada! Para tramitar la recogida con Correos es necesario realizar el pago de 15€ previamente en una de nuestras cuentas:\n"
+            f"   🏦 Banco Santander: ES58 0049 4943 3521 1610 3259\n"
+            f"   🏦 BBVA: ES22 0182 0972 1402 0168 8870\n"
+            f"   Titular: Affirma Technology Group S.L.\n"
+            f"   Una vez realizado, envíanos el justificante de pago por este WhatsApp o al correo que te indiquemos, indicando tu nombre en el concepto. En cuanto lo confirmemos, solicitamos la recogida a Correos. 🚚'\n"
+            f"   PARTE B (linea de comando interna, en una linea aparte al final, el cliente NO la ve): CONFIRMAR_ENVIO|<datetime_iso>|<nombre_cliente>|<motivo>|<direccion>|<dni_nie_cif>|<email>\n"
             f"   EJEMPLO completo de respuesta valida cuando el cliente dice 'si':\n"
             f"   ---\n"
-            f"   Perfecto 😊 Hemos registrado tu solicitud de recogida. Para poder tramitarla con Correos, recuerda realizar el abono de los 15€ y enviarnos el justificante de pago por WhatsApp o correo. Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, por lo que no podemos confirmarte una fecha exacta de momento. Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles.\n"
+            f"   ✅ ¡Solicitud registrada! Para tramitar la recogida con Correos es necesario realizar el pago de 15€ previamente en una de nuestras cuentas:\n"
+            f"   🏦 Banco Santander: ES58 0049 4943 3521 1610 3259\n"
+            f"   🏦 BBVA: ES22 0182 0972 1402 0168 8870\n"
+            f"   Titular: Affirma Technology Group S.L.\n"
+            f"   Una vez realizado, envíanos el justificante de pago por este WhatsApp o al correo que te indiquemos, indicando tu nombre en el concepto. En cuanto lo confirmemos, solicitamos la recogida a Correos. 🚚\n"
             f"\n"
-            f"   CONFIRMAR_ENVIO|2026-04-22T10:00:00+02:00|Carlo Gabriel|Dyson SV10 ruidos|Calle Blasco de Garay 61, 28015 Madrid|12345678A\n"
+            f"   CONFIRMAR_ENVIO|2026-04-22T10:00:00+02:00|Carlo Gabriel|Dyson SV10 ruidos|Calle Blasco de Garay 61, 28015 Madrid|12345678A|carlo@email.com\n"
             f"   ---\n"
             f"8. NUNCA omitir la linea CONFIRMAR_ENVIO al confirmar. Sin esa linea, la recogida NO se registra en el sistema.\n"
             f"\nIMPORTANTE:\n"
@@ -377,8 +386,8 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
             }
 
         if line.startswith("CONFIRMAR_ENVIO|"):
-            parts = line.split("|", 5)
-            if len(parts) not in (5, 6):
+            parts = line.split("|", 6)
+            if len(parts) not in (5, 6, 7):
                 logger.warning("Formato inválido en CONFIRMAR_ENVIO", extra={"line": line})
                 return None
 
@@ -388,7 +397,8 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
                 "customer_name": parts[2].strip(),
                 "reason": parts[3].strip(),
                 "address": parts[4].strip(),
-                "dni_nie_cif": parts[5].strip() if len(parts) == 6 else "",
+                "dni_nie_cif": parts[5].strip() if len(parts) >= 6 else "",
+                "email": parts[6].strip() if len(parts) == 7 else "",
                 "raw_line": line,
             }
 
@@ -682,32 +692,30 @@ async def process_ai_calendar_command(
 
     elif command["type"] == "envio":
         dni_info = f"\nDNI/NIE/CIF: {command['dni_nie_cif']}" if command.get("dni_nie_cif") else ""
+        email_info = f"\nEmail: {command['email']}" if command.get("email") else ""
         created_event = await calendar_service.create_event(
             title=f"RECOGIDA: {command['customer_name']}",
             start_iso=command["datetime_iso"],
             duration_minutes=30,
-            description=f"{command['reason']}\nDirección: {command['address']}{dni_info}",
+            description=f"{command['reason']}\nDirección: {command['address']}{dni_info}{email_info}",
             attendee_phone=attendee_phone,
         )
 
+        payment_msg = (
+            "Para tramitar la recogida con Correos es necesario realizar el pago de *15€* previamente "
+            "en una de nuestras cuentas:\n\n"
+            "🏦 *Banco Santander:* ES58 0049 4943 3521 1610 3259\n"
+            "🏦 *BBVA:* ES22 0182 0972 1402 0168 8870\n"
+            "_Titular: Affirma Technology Group S.L._\n\n"
+            "Una vez realizado, envíanos el *justificante de pago* por este WhatsApp o al correo que te "
+            "indiquemos, indicando tu nombre en el concepto. En cuanto lo confirmemos, solicitamos la "
+            "recogida a Correos. 🚚"
+        )
+
         if created_event:
-            user_message = (
-                f"✅ Hemos registrado tu solicitud de recogida.\n\n"
-                f"⚠️ *Importante:* para poder tramitarla con Correos, recuerda realizar el abono de los 15€ "
-                f"y enviarnos el justificante de pago por WhatsApp o correo.\n\n"
-                f"Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, "
-                f"por lo que no podemos confirmarte una fecha exacta de momento.\n\n"
-                f"Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles."
-            )
+            user_message = f"✅ ¡Solicitud registrada!\n\n{payment_msg}"
         else:
-            user_message = (
-                "✅ Hemos recibido tu solicitud de recogida.\n\n"
-                "⚠️ *Importante:* para poder tramitarla con Correos, recuerda realizar el abono de los 15€ "
-                "y enviarnos el justificante de pago por WhatsApp o correo.\n\n"
-                "Ten en cuenta que actualmente Correos no nos permite elegir un día concreto de recogida, "
-                "por lo que no podemos confirmarte una fecha exacta de momento.\n\n"
-                "Un asistente de Kelatos se pondrá en contacto contigo con todos los detalles."
-            )
+            user_message = f"✅ Hemos recibido tu solicitud de recogida.\n\n{payment_msg}"
 
     elif command["type"] == "alquiler":
         description = (
