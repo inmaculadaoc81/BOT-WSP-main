@@ -366,7 +366,7 @@ def get_outside_hours_message() -> str:
 
     # Find next business day/time
     if now.weekday() < 5 and now.strftime("%m-%d") not in HOLIDAYS_2026 and current_time < 9 * 60 + 30:
-        when = "hoy en cuanto abramos"
+        when = "hoy dentro de nuestro horario de atención"
     else:
         next_day = now + timedelta(days=1)
         for _ in range(7):
@@ -376,10 +376,10 @@ def get_outside_hours_message() -> str:
 
         diff_days = (next_day.date() - now.date()).days
         if diff_days == 1:
-            when = "mañana en cuanto abramos"
+            when = "mañana dentro de nuestro horario de atención"
         else:
             day_name = WEEKDAY_NAMES[next_day.weekday()]
-            when = f"el *{day_name}* en cuanto abramos"
+            when = f"el *{day_name}* dentro de nuestro horario de atención"
 
     # Pedir contacto si el siguiente día laborable es lunes (viernes noche, sábado o domingo).
     # WhatsApp solo permite responder dentro de las 24h del último mensaje del cliente,
