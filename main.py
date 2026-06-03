@@ -208,7 +208,21 @@ async def receive_message(request: Request):
             return {"status": "human mode"}
 
         # Bot mode: get conversation history for context
-        history = await db.get_history(sender, limit=30)
+        history = await db.get_history(sender, limit=20)
+
+        # Detect returning session (gap > 4 hours)
+        last_msg_time_wa = await db.get_last_message_time(sender)
+        now_utc_wa = datetime.now(timezone.utc)
+        session_context_wa = None
+        if last_msg_time_wa:
+            gap_hours = (now_utc_wa - last_msg_time_wa).total_seconds() / 3600
+            if gap_hours >= 4:
+                session_context_wa = (
+                    f"[SESIÓN RETOMADA]\n"
+                    f"Han pasado aproximadamente {gap_hours:.0f} horas desde el último mensaje del cliente.\n"
+                    f"Revisa el historial para identificar el tema de la última consulta y saluda en consecuencia."
+                )
+                logger.info(f"Returning session detected for {sender} (gap: {gap_hours:.1f}h)")
 
         # Save user message
         await db.save_message(sender, "user", text)
@@ -241,6 +255,9 @@ async def receive_message(request: Request):
 
         # Fetch only what's needed based on classification
         extra_context_parts = []
+
+        if session_context_wa:
+            extra_context_parts.append(session_context_wa)
 
         needs_repair = intent.needs_repair_lookup
         if needs_repair:
@@ -664,7 +681,7 @@ async def chatwoot_webhook(request: Request):
             return {"status": "human mode"}
 
         # Get conversation history
-        history = await db.get_history(history_key, limit=30)
+        history = await db.get_history(history_key, limit=20)
 
         # Si la conversacion es nueva (sin historial) o lleva mas de
         # ESPOCRM_NEW_LEAD_AFTER_SECONDS inactiva, programar un volcado
@@ -730,6 +747,16 @@ async def chatwoot_webhook(request: Request):
 
         # Fetch only what's needed based on classification
         extra_context_parts = []
+
+        # Detect returning session (gap > 4 hours)
+        if last_msg_time and gap is not None and gap >= 4 * 3600:
+            gap_hours = gap / 3600
+            extra_context_parts.append(
+                f"[SESIÓN RETOMADA]\n"
+                f"Han pasado aproximadamente {gap_hours:.0f} horas desde el último mensaje del cliente.\n"
+                f"Revisa el historial para identificar el tema de la última consulta y saluda en consecuencia."
+            )
+            logger.info(f"Returning session detected for {sender_key} (gap: {gap_hours:.1f}h)")
 
         needs_repair = intent.needs_repair_lookup
         if needs_repair and phone:
