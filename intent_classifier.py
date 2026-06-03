@@ -51,7 +51,12 @@ async def classify_intent(
         "un agente humano, quiere ser transferido, o expresa frustracion clara con el bot "
         "(ej: 'quiero hablar con alguien de verdad', 'pasame con una persona', 'no me entiendes'). "
         "IMPORTANTE: NO marcar needs_human cuando el usuario describe un problema tecnico, una averia, "
-        "o quiere comprar un producto/pieza. Esos casos los maneja el bot.\n"
+        "o quiere comprar un producto/pieza. Esos casos los maneja el bot. "
+        "NUNCA marcar needs_human para preguntas sobre diagnostico, presupuesto, horarios, "
+        "direccion, precios o servicios — esas preguntas las responde el bot directamente. "
+        "Ejemplos que NO son needs_human: 'me podeis dar un diagnostico previo', "
+        "'cuanto cuesta reparar', 'podeis diagnosticarlo', 'que precio tiene', "
+        "'cuando abris', 'donde estais'.\n"
         '- "needs_rental_lookup": true si el usuario pregunta qué equipos hay disponibles para alquilar, '
         "qué modelos tienen, si tienen gaming/Mac/Windows/Surface para alquiler, qué portátiles tienen, "
         "disponibilidad de equipos de alquiler, o cualquier consulta sobre el catálogo o stock de alquiler.\n"
