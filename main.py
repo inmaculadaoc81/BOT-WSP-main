@@ -639,8 +639,11 @@ async def chatwoot_webhook(request: Request):
             phone = await chatwoot_svc.get_contact_phone(contact_id)
             logger.info(f"Phone from Contacts API: {phone}")
 
-        # Use conversation_id as the "sender" key for chat history
+        # Use conversation_id as the "sender" key for mode/rate tracking
         sender_key = f"chatwoot_{conversation_id}"
+        # Use phone as history key when available so context persists across
+        # new conversations (new conversation_id) from the same client.
+        history_key = phone if phone else sender_key
 
         # Per-phone rate limiting
         recent = await db.count_recent_messages(sender_key, seconds=PHONE_RATE_WINDOW)
@@ -656,17 +659,17 @@ async def chatwoot_webhook(request: Request):
         mode = await db.get_conversation_mode(sender_key)
 
         if mode == "human":
-            await db.save_message(sender_key, "user", content)
+            await db.save_message(history_key, "user", content)
             logger.info(f"Message saved for human agent (conversation: {conversation_id})")
             return {"status": "human mode"}
 
         # Get conversation history
-        history = await db.get_history(sender_key, limit=30)
+        history = await db.get_history(history_key, limit=30)
 
         # Si la conversacion es nueva (sin historial) o lleva mas de
         # ESPOCRM_NEW_LEAD_AFTER_SECONDS inactiva, programar un volcado
         # diferido de la conversacion completa hacia EspoCRM.
-        last_msg_time = await db.get_last_message_time(sender_key)
+        last_msg_time = await db.get_last_message_time(history_key)
         now_utc = datetime.now(timezone.utc)
         gap = (now_utc - last_msg_time).total_seconds() if last_msg_time else None
         is_new_session = last_msg_time is None or (
@@ -686,7 +689,7 @@ async def chatwoot_webhook(request: Request):
             try:
                 espocrm_svc.schedule_lead_from_conversation(
                     db=db,
-                    sender_key=sender_key,
+                    sender_key=history_key,
                     lead_label=lead_label,
                     contact_name=sender_name,
                     phone=phone or "",
@@ -697,7 +700,7 @@ async def chatwoot_webhook(request: Request):
                 logger.error(f"Error scheduling EspoCRM lead: {e}", exc_info=True)
 
         # Save user message
-        await db.save_message(sender_key, "user", content)
+        await db.save_message(history_key, "user", content)
 
         # Classify intent (cheap gpt-4o-mini call)
         intent = await classify_intent(
@@ -714,13 +717,13 @@ async def chatwoot_webhook(request: Request):
         # Handoff to human agent if requested
         if intent.needs_human:
             if is_within_business_hours():
-                await db.save_message(sender_key, "assistant", HANDOFF_MESSAGE)
+                await db.save_message(history_key, "assistant", HANDOFF_MESSAGE)
                 await chatwoot_svc.send_message(conversation_id, HANDOFF_MESSAGE)
                 await _handle_handoff(sender_key, conversation_id=conversation_id)
                 return {"status": "handoff"}
             else:
                 msg = get_outside_hours_message()
-                await db.save_message(sender_key, "assistant", msg)
+                await db.save_message(history_key, "assistant", msg)
                 await chatwoot_svc.send_message(conversation_id, msg)
                 logger.info(f"Handoff denied for conversation {conversation_id} — outside business hours")
                 return {"status": "outside_hours"}
@@ -777,13 +780,13 @@ async def chatwoot_webhook(request: Request):
             if is_within_business_hours():
                 clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
                 full_msg = f"{clean_response}\n\n{HANDOFF_MESSAGE}" if clean_response else HANDOFF_MESSAGE
-                await db.save_message(sender_key, "assistant", full_msg)
+                await db.save_message(history_key, "assistant", full_msg)
                 await chatwoot_svc.send_message(conversation_id, full_msg)
                 await _handle_handoff(sender_key, conversation_id=conversation_id)
             else:
                 # Outside hours: discard "te transfiero" text, ask for contact instead
                 full_msg = get_outside_hours_message()
-                await db.save_message(sender_key, "assistant", full_msg)
+                await db.save_message(history_key, "assistant", full_msg)
                 await chatwoot_svc.send_message(conversation_id, full_msg)
             return {"status": "handoff"}
 
@@ -798,7 +801,7 @@ async def chatwoot_webhook(request: Request):
         logger.info("CREATED EVENT (Chatwoot): %s", created_event)
 
         # Save bot response
-        await db.save_message(sender_key, "assistant", clean_response)
+        await db.save_message(history_key, "assistant", clean_response)
 
         # Send response via Chatwoot
         await chatwoot_svc.send_message(conversation_id, clean_response)
