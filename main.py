@@ -76,6 +76,37 @@ def _is_in_appointment_flow(history: list[dict]) -> bool:
     return False
 
 
+_BUDGET_DECISION_KEYWORDS = [
+    "rechaz", "no acepto", "no lo acepto", "acepto el presupuesto",
+    "acepto la reparacion", "acepto la reparación", "sí acepto",
+    "si acepto", "no quiero que lo reparen", "cancelar la reparacion",
+    "cancelar la reparación", "no me interesa la reparacion",
+    "no me interesa la reparación",
+]
+_BUDGET_CONTEXT_KEYWORDS = ["presupuesto", "reparacion", "reparación", "precio"]
+
+BUDGET_DECISION_RESPONSE = (
+    "Para aceptar o rechazar el presupuesto es necesario que respondas al correo "
+    "electrónico en el que te lo enviamos. Por WhatsApp no podemos gestionar esa "
+    "confirmación. 😊"
+)
+
+
+def _is_budget_decision(text: str, history: list[dict]) -> bool:
+    """True si el mensaje es una aceptación o rechazo de presupuesto."""
+    t = text.lower()
+    if any(kw in t for kw in _BUDGET_DECISION_KEYWORDS):
+        return True
+    # "rechazarlo", "aceptarlo" solos necesitan contexto de presupuesto en el historial
+    if any(kw in t for kw in ["rechazarlo", "aceptarlo", "no lo quiero", "adelante"]):
+        combined = " ".join(
+            m.get("content", "") for m in (history or []) if m.get("content")
+        ).lower()
+        if any(kw in combined for kw in _BUDGET_CONTEXT_KEYWORDS):
+            return True
+    return False
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
@@ -294,13 +325,18 @@ async def receive_message(request: Request):
         if intent.brand:
             brand_faq = load_brand_faq(intent.brand)
 
+        # Intercept: aceptación/rechazo de presupuesto — respuesta fija, sin LLM
+        if _is_budget_decision(text, history):
+            ai_response = BUDGET_DECISION_RESPONSE
+            logger.info("Budget decision intercepted (WhatsApp), returning fixed response.")
+        else:
         # Generate AI response
-        ai_response = await openai_svc.generate_response(
-            user_message=text,
-            history=history,
-            extra_context=extra_context,
-            brand_faq=brand_faq,
-        )
+            ai_response = await openai_svc.generate_response(
+                user_message=text,
+                history=history,
+                extra_context=extra_context,
+                brand_faq=brand_faq,
+            )
         logger.info("RAW AI RESPONSE (WhatsApp):\n%s", ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
@@ -793,13 +829,18 @@ async def chatwoot_webhook(request: Request):
         if intent.brand:
             brand_faq = load_brand_faq(intent.brand)
 
+        # Intercept: aceptación/rechazo de presupuesto — respuesta fija, sin LLM
+        if _is_budget_decision(content, history):
+            ai_response = BUDGET_DECISION_RESPONSE
+            logger.info("Budget decision intercepted (Chatwoot), returning fixed response.")
+        else:
         # Generate AI response
-        ai_response = await openai_svc.generate_response(
-            user_message=content,
-            history=history,
-            extra_context=extra_context,
-            brand_faq=brand_faq,
-        )
+            ai_response = await openai_svc.generate_response(
+                user_message=content,
+                history=history,
+                extra_context=extra_context,
+                brand_faq=brand_faq,
+            )
         logger.info("RAW AI RESPONSE (Chatwoot):\n%s", ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
