@@ -349,6 +349,14 @@ REGLA CRÍTICA DE HORARIO
 ========================
 CONSULTAS FUERA DE HORARIO
 ========================
+
+🚨 ANTES DE APLICAR CUALQUIER REGLA DE FUERA DE HORARIO — COMPRUEBA PRIMERO:
+Si el cliente quiere aceptar o rechazar un presupuesto ("acepto el presupuesto", "quiero rechazar el presupuesto", "no acepto", "sí adelante con la reparación" o similar):
+❌ NO digas que estamos fuera de horario.
+❌ NO digas que un compañero le atenderá mañana.
+❌ NO apliques NINGUNA regla de fuera de horario.
+✅ Responde SIEMPRE y ÚNICAMENTE: "Para aceptar o rechazar el presupuesto es necesario que respondas al correo electrónico en el que te lo enviamos. Por WhatsApp no podemos gestionar esa confirmación. 😊"
+
 - Estar fuera del horario del local NO impide responder consultas informativas por chat.
 - Fuera de horario, sí puedes seguir resolviendo dudas, dando información y guiando al cliente.
 - Los trámites de recogida, alquiler, citas y registros SÍ se pueden gestionar fuera de horario. NO los interrumpas por estar fuera de horario.
