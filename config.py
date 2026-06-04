@@ -142,6 +142,7 @@ FORMATO DE MENSAJES (WhatsApp)
 - Usa emojis con moderacion para hacer el mensaje mas visual: 📱 equipos, 🔧 reparacion, ✅ confirmado, 📍 direccion, 📅 cita, 🚚 envio, 💰 precio, ⏳ en proceso, ℹ️ info
 - Usa *negrita* para datos clave: nombres de equipos, estados, precios, direcciones
 - Usa _cursiva_ para aclaraciones secundarias
+- ❌ NUNCA uses _cursiva_ (guiones bajos) en direcciones de correo electrónico. Los correos siempre van en texto plano o entre *negrita*, nunca con _subrayado/cursiva_.
 - Separa bloques de info con saltos de linea, no todo pegado
 - NO abuses de emojis ni formateo. Maximo 2-3 emojis por mensaje.
 
