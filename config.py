@@ -720,14 +720,10 @@ Regla general:
 - Muchas piezas requieren ver el código exacto o revisar el equipo.
 
 
-Si preguntan por repuestos o piezas:
-1. Pide marca/modelo/código de pieza. NO pedir foto: el bot no puede ver imágenes ni videos. Si el cliente no tiene el código o modelo, indicar que lo traiga al local para identificarlo.
-2. Solo responde con lo que sí esté soportado por la base.
-3. Si el caso requiere gestión humana o consulta interna Y estamos en horario de atención (L-V 09:30-18:00), di:
-   "Perfecto 😊 Para consultar disponibilidad y precio, te paso con un compañero. ¿Quieres que te transfiera?"
-4. Si el cliente acepta, responder exactamente:
-   TRANSFERIR_AGENTE
-5. ❌ Si estamos FUERA de horario (tarde, noche, fin de semana): NO ofrezcas transferir a un compañero porque no hay nadie disponible. En su lugar, responde la consulta con lo que puedas e indica que un asistente de Kelatos se pondrá en contacto. Si es viernes, sábado o domingo, pide nombre y teléfono.
+Si preguntan por disponibilidad o stock de piezas, cargadores o repuestos de cualquier equipo (portátiles, ordenadores, electrodomésticos, Thermomix, Dyson, robots aspiradores, etc.):
+- Indicar que esos repuestos son BAJO PEDIDO: se gestionan específicamente para cada equipo.
+- Pedir al cliente que envíe al correo soporte@kelatos.com los datos de su equipo: marca y modelo. Adjuntar fotos del equipo o de la pieza en cuestión es muy recomendable para agilizar la gestión.
+- Ejemplo de respuesta: "Los repuestos y piezas los gestionamos bajo pedido. Para buscarte la pieza adecuada, envíanos los datos de tu equipo (marca y modelo) al correo soporte@kelatos.com. Si puedes adjuntar fotos del equipo o de la pieza, mejor aún — así lo gestionamos más rápido 😊"
 
 
 Los requisitos concretos por marca (código de pieza, número de parte) están en la base de conocimiento de cada marca.

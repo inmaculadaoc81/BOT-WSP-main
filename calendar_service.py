@@ -525,28 +525,28 @@ def _validate_appointment(
         if not has_phone and not _PHONE_RE.search(history_text):
             missing.append("numero de telefono")
 
-    # Fecha y hora: validar que sea futura y dentro del horario de citas.
-    try:
-        dt = datetime.fromisoformat(command["datetime_iso"])
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=MADRID_TZ)
-        local = dt.astimezone(MADRID_TZ)
-        now = datetime.now(MADRID_TZ)
+    # Fecha y hora: solo validar para citas (para recogidas/envios Correos decide la fecha).
+    if cmd_type == "cita":
+        try:
+            dt = datetime.fromisoformat(command["datetime_iso"])
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=MADRID_TZ)
+            local = dt.astimezone(MADRID_TZ)
+            now = datetime.now(MADRID_TZ)
 
-        if local < now:
-            missing.append("fecha y hora futura (la indicada ya paso)")
-        elif local.weekday() >= 5:
-            missing.append("dia de lunes a viernes (no se atiende fines de semana)")
-        elif local.strftime("%m-%d") in _HOLIDAYS:
-            missing.append(f"dia laborable (el {local.strftime('%d/%m')} es festivo, no se atiende)")
-        elif command.get("type") == "cita":
-            # Ventana estricta: 10:00 – 17:00 (último slot válido a las 17:00 exactas).
-            # Cualquier hora posterior a 17:00 (17:01, 17:30...) se rechaza.
-            total_mins = local.hour * 60 + local.minute
-            if not (10 * 60 <= total_mins <= 17 * 60):
-                missing.append("hora entre las 10:00 y las 17:00 (último slot a las 17:00 en punto)")
-    except (ValueError, KeyError, TypeError):
-        missing.append("fecha y hora valida")
+            if local < now:
+                missing.append("fecha y hora futura (la indicada ya paso)")
+            elif local.weekday() >= 5:
+                missing.append("dia de lunes a viernes (no se atiende fines de semana)")
+            elif local.strftime("%m-%d") in _HOLIDAYS:
+                missing.append(f"dia laborable (el {local.strftime('%d/%m')} es festivo, no se atiende)")
+            else:
+                # Ventana estricta: 10:00 – 17:00 (último slot válido a las 17:00 exactas).
+                total_mins = local.hour * 60 + local.minute
+                if not (10 * 60 <= total_mins <= 17 * 60):
+                    missing.append("hora entre las 10:00 y las 17:00 (último slot a las 17:00 en punto)")
+        except (ValueError, KeyError, TypeError):
+            missing.append("fecha y hora valida")
 
     # Direccion: obligatoria para envios, devoluciones y alquiler a domicilio.
     if command.get("type") in ("envio", "devolucion"):
