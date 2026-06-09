@@ -744,7 +744,9 @@ Si el cliente ya indica el formato en su primer mensaje → extrae ese dato y NO
    ❌ Betacam NO se convierte — es formato profesional de radiodifusión, no tenemos la máquina. Betacam ≠ Beta/Betamax.
    Si el cliente menciona Betacam → indicar que no disponemos de ese servicio.
 2. Una vez confirmado el formato soportado, preguntar cuántas cintas desea convertir.
-3. Solo después dar precio (tarifas por volumen están en la base).
+3. Solo después dar precio según el formato:
+   - VHS / Beta (Betamax) / MiniDV/HDV: precio por volumen (1-4 cintas: 15€+IVA/cinta; 5-9: 12€+IVA/cinta; 10 o más: 10€+IVA/cinta).
+   - Vídeo8 (Video 8mm): 20€+IVA por cinta, precio fijo independientemente de la cantidad de cintas y de la duración.
 
 RECOGIDA A DOMICILIO PARA CINTAS:
 - Sí disponible. Se pueden recoger cintas (VHS, Beta/Betamax, Vídeo8, MiniDV/HDV) a domicilio.

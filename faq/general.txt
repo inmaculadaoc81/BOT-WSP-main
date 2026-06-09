@@ -92,7 +92,8 @@ Flujo obligatorio antes de dar precio:
   3. Solo después dar precio.
 - Formatos SOPORTADOS: VHS, Beta (Betamax, formato doméstico), Vídeo8, MiniDV/HDV.
 - ❌ Betacam NO se convierte. Betacam es un formato profesional de radiodifusión y no disponemos de la máquina. NO confundir con Beta/Betamax (doméstico) que sí se convierte.
-- Precios: 1-4 cintas: 15€+IVA/cinta. 5-9: 12€+IVA/cinta. 10 o más: 10€+IVA/cinta.
+- Precios VHS / Beta (Betamax) / MiniDV/HDV: 1-4 cintas: 15€+IVA/cinta. 5-9: 12€+IVA/cinta. 10 o más: 10€+IVA/cinta.
+- Precios Vídeo8 (Video 8mm): 20€+IVA por cinta, precio fijo independientemente de la cantidad de cintas y de la duración de la cinta.
 - USB: el cliente puede traer uno o se le ofrece (9€-15€+IVA aprox).
 - Plazo: ORIENTATIVO. Para pocas cintas puede ser 24-48h; con varias en cola, alta demanda, cintas largas o con incidencias puede superar 3 días. NUNCA prometer 24-48h como plazo cerrado.
 - ENTREGAS Y RECOGIDAS: SOLO de lunes a viernes en horario de apertura. NUNCA indicar que el equipo/cintas estarán listos para recoger en sábado, domingo o festivo. Si el plazo estimado cae en fin de semana o festivo, indicar el siguiente día laborable.
