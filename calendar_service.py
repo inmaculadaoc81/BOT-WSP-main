@@ -701,7 +701,7 @@ async def process_ai_calendar_command(
             "Para tramitar la recogida con Correos es necesario realizar el pago de *30€ (IVA incluido)* "
             "— recogida + envío de vuelta — a través del siguiente enlace:\n\n"
             "💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n\n"
-            "En cuanto confirmemos el pago, solicitamos la recogida a Correos. 🚚"
+            "Una vez realizado el pago, envía el comprobante a *soporte@kelatos.com* y gestionamos la recogida con Correos. 🚚"
         )
 
         if created_event:
