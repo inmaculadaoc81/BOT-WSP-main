@@ -498,7 +498,7 @@ class SheetsService:
         lines.append("        Opción 2️⃣: [caracteristicas equipo 2 traducidas]")
         lines.append("        Opción 3️⃣: [caracteristicas equipo 3 traducidas]")
         lines.append("        _(y así sucesivamente para cada equipo de esa marca)_")
-        lines.append("        ¿Cuánto tiempo necesitarías el equipo?")
+        lines.append("        ¿Cuál de estas opciones prefieres y cuánto tiempo necesitarías el equipo?")
         lines.append("     TRADUCCIÓN OBLIGATORIA de términos técnicos a lenguaje comprensible:")
         lines.append("        - i3-xxx / i5-xxx / i7-xxx / i9-xxx / Ryzen X → 'procesador i3-xxx' / 'procesador i5-xxx' etc.")
         lines.append("        - SSD XXX GB → 'disco SSD de XXX GB'")

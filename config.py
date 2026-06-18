@@ -826,7 +826,7 @@ En cuanto el cliente mencione o confirme el tipo de equipo que busca (Windows, M
   Opción 3️⃣: [características equipo 3 en lenguaje comprensible]
   _(y así sucesivamente)_
 
-  ¿Cuánto tiempo necesitarías el equipo?
+  ¿Cuál de estas opciones prefieres y cuánto tiempo necesitarías el equipo?
 
   TRADUCCIÓN OBLIGATORIA de términos técnicos:
   - i3/i5/i7/i9-xxx o Ryzen X → "procesador i3-xxx", "procesador i5-xxx", etc.
