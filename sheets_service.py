@@ -439,20 +439,40 @@ class SheetsService:
                 "y ofrécele dejar sus datos para ser contactado cuando haya disponibilidad."
             )
 
-        # Group equipment by tipo → marca → list of caracteristicas
+        # Group equipment by client-facing category → marca → list of caracteristicas
+        # Category is derived from tipo + sistema_operativo + marca to avoid
+        # misclassifications (e.g. Apple with sistema_operativo=Windows appearing under Windows)
+        def _categoria(tipo: str, so: str, marca: str) -> str:
+            t = tipo.lower()
+            s = so.lower()
+            m = marca.lower()
+            if "gamer" in t or "gaming" in t:
+                return "Ordenador Gamer"
+            if "surface" in t:
+                return "Microsoft Surface"
+            if "apple" in m or "mac" in s:
+                return "Mac"
+            if "windows" in s:
+                return "Windows"
+            return tipo  # fallback: use raw tipo value
+
         tipo_data: dict[str, dict[str, list[str]]] = {}
         for e in equipos:
-            tipo = e.get("tipo", "").strip()
+            categoria = _categoria(
+                e.get("tipo", "").strip(),
+                e.get("sistema_operativo", "").strip(),
+                e.get("marca", "").strip(),
+            )
             marca = e.get("marca", "").strip()
             caract = e.get("caracteristicas", "").strip()
-            if not tipo or not marca:
+            if not categoria or not marca:
                 continue
-            if tipo not in tipo_data:
-                tipo_data[tipo] = {}
-            if marca not in tipo_data[tipo]:
-                tipo_data[tipo][marca] = []
+            if categoria not in tipo_data:
+                tipo_data[categoria] = {}
+            if marca not in tipo_data[categoria]:
+                tipo_data[categoria][marca] = []
             if caract:
-                tipo_data[tipo][marca].append(caract)
+                tipo_data[categoria][marca].append(caract)
 
         lines = ["[EQUIPOS DISPONIBLES PARA ALQUILER]"]
         lines.append(f"Total equipos disponibles en stock: {len(equipos)}")
