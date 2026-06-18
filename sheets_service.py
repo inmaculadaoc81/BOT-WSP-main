@@ -439,36 +439,47 @@ class SheetsService:
                 "y ofrécele dejar sus datos para ser contactado cuando haya disponibilidad."
             )
 
+        # Group equipment by tipo → marca → list of caracteristicas
+        tipo_data: dict[str, dict[str, list[str]]] = {}
+        for e in equipos:
+            tipo = e.get("tipo", "").strip()
+            marca = e.get("marca", "").strip()
+            caract = e.get("caracteristicas", "").strip()
+            if not tipo or not marca:
+                continue
+            if tipo not in tipo_data:
+                tipo_data[tipo] = {}
+            if marca not in tipo_data[tipo]:
+                tipo_data[tipo][marca] = []
+            if caract:
+                tipo_data[tipo][marca].append(caract)
+
         lines = ["[EQUIPOS DISPONIBLES PARA ALQUILER]"]
-        lines.append(f"Total equipos sin defectos y disponibles en stock: {len(equipos)}")
-        lines.append("(Lista interna — NO mostrar al cliente de golpe)\n")
+        lines.append(f"Total equipos disponibles en stock: {len(equipos)}")
+        lines.append("(Lista interna — NO mostrar modelos ni datos técnicos completos al cliente)\n")
 
-        for i, e in enumerate(equipos, 1):
-            parts = [f"{i}. {e['marca']} {e['modelo']}"]
-            if e["tipo"]:
-                parts.append(f"Tipo: {e['tipo']}")
-            if e["sistema_operativo"]:
-                parts.append(f"SO: {e['sistema_operativo']}")
-            if e["caracteristicas"]:
-                parts.append(e["caracteristicas"])
-            lines.append(" | ".join(parts))
+        for tipo, marcas in tipo_data.items():
+            lines.append(f"Tipo: {tipo}")
+            for marca, caracts in marcas.items():
+                lines.append(f"  Marca: {marca}")
+                for c in caracts:
+                    lines.append(f"    - {c}")
+            lines.append("")
 
-        lines.append("\nINSTRUCCIONES OBLIGATORIAS — EQUIPOS ALQUILER:")
-        lines.append("❌ PROHIBIDO listar todos los equipos de golpe sin que el cliente haya especificado qué busca.")
-        lines.append("✅ FLUJO CORRECTO:")
-        lines.append("  1. Primero pregunta qué tipo de equipo necesita: ¿Windows, Mac, Surface, Gaming?")
-        lines.append("  2. Luego pregunta uso principal o requisitos: ¿para qué lo necesita? ¿RAM mínima, procesador, almacenamiento?")
-        lines.append("  3. Solo después filtra la lista interna y muestra máximo 3-4 opciones que encajen.")
-        lines.append("  4. Si ninguno encaja, díselo honestamente y ofrece lo más parecido disponible.")
-        lines.append("- No menciones estados, defectos ni datos internos. Solo marca, modelo, SO y características.")
+        lines.append("INSTRUCCIONES OBLIGATORIAS — EQUIPOS ALQUILER:")
+        lines.append("✅ FLUJO:")
+        lines.append("  1. El cliente indica el tipo (Windows, Mac, Surface, Gaming).")
+        lines.append("     → Filtra por ese tipo y menciona ÚNICAMENTE las marcas disponibles.")
+        lines.append("     Ejemplo: 'Tenemos disponibles equipos Windows de las marcas HP y Acer. ¿Alguna preferencia de marca?'")
+        lines.append("  2. El cliente indica una marca.")
+        lines.append("     → Muestra las características de los equipos disponibles de ESA marca (del campo 'caracteristicas').")
+        lines.append("     Ejemplo: 'De HP tenemos disponibles equipos con estas características: [lista de caracteristicas]. ¿Cuánto tiempo necesitas el equipo?'")
+        lines.append("  3. Continúa con el PASO 2 (duración).")
+        lines.append("  4. Si no hay equipos del tipo solicitado, informa y menciona qué tipos sí tienen disponibilidad.")
+        lines.append("- ❌ NUNCA menciones modelos concretos ni nombres de modelo.")
+        lines.append("- ❌ NUNCA listes marcas ni características sin que el cliente haya indicado primero el tipo.")
+        lines.append("- ❌ NUNCA ofrezcas un tipo diferente al solicitado sin antes informar de que no hay del tipo pedido.")
         lines.append("- La disponibilidad final siempre la confirma un asistente.")
-        lines.append("\n⚠️ REGLA DE TIPO DE EQUIPO — OBLIGATORIO:")
-        lines.append("Cada equipo tiene un campo 'Tipo' (Portátil, Ordenador de mesa, etc.).")
-        lines.append("Si el cliente pide un tipo concreto (ej: 'portátiles', 'laptops', 'ordenadores de mesa'),")
-        lines.append("SOLO muestra equipos cuyo campo Tipo coincida con lo solicitado.")
-        lines.append("❌ NUNCA ofrezcas un Ordenador de mesa cuando el cliente pide portátil, ni viceversa.")
-        lines.append("❌ Si no hay equipos del tipo solicitado, dilo claramente: 'Actualmente no tenemos [tipo] disponibles.'")
-        lines.append("  No ofrezcas otro tipo como sustituto sin antes informar que no hay del tipo pedido.")
 
         return "\n".join(lines)
 
