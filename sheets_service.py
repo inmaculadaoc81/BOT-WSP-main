@@ -456,7 +456,7 @@ class SheetsService:
                 return "Windows"
             return tipo  # fallback: use raw tipo value
 
-        tipo_data: dict[str, dict[str, list[str]]] = {}
+        tipo_data: dict[str, dict[str, list[tuple[str, str]]]] = {}
         for e in equipos:
             categoria = _categoria(
                 e.get("tipo", "").strip(),
@@ -464,6 +464,8 @@ class SheetsService:
                 e.get("marca", "").strip(),
             )
             marca = e.get("marca", "").strip()
+            modelo = e.get("modelo", "").strip()
+            modelo_corto = _shorten_model(modelo)
             caract = e.get("caracteristicas", "").strip()
             if not categoria or not marca:
                 continue
@@ -472,18 +474,21 @@ class SheetsService:
             if marca not in tipo_data[categoria]:
                 tipo_data[categoria][marca] = []
             if caract:
-                tipo_data[categoria][marca].append(caract)
+                tipo_data[categoria][marca].append((modelo_corto, caract))
 
         lines = ["[EQUIPOS DISPONIBLES PARA ALQUILER]"]
         lines.append(f"Total equipos disponibles en stock: {len(equipos)}")
-        lines.append("(Lista interna — NO mostrar modelos ni datos técnicos completos al cliente)\n")
+        lines.append("(Lista interna — usar identificador abreviado marca+modelo al inicio de cada opcion)\n")
 
         for tipo, marcas in tipo_data.items():
             lines.append(f"Tipo: {tipo}")
-            for marca, caracts in marcas.items():
+            for marca, items in marcas.items():
                 lines.append(f"  Marca: {marca}")
-                for c in caracts:
-                    lines.append(f"    - {c}")
+                for modelo_corto, c in items:
+                    if modelo_corto:
+                        lines.append(f"    - [{marca} {modelo_corto}] {c}")
+                    else:
+                        lines.append(f"    - {c}")
             lines.append("")
 
         lines.append("INSTRUCCIONES OBLIGATORIAS — EQUIPOS ALQUILER:")
@@ -494,11 +499,13 @@ class SheetsService:
         lines.append("  2. El cliente indica una marca.")
         lines.append("     → Muestra TODAS las características de los equipos de ESA marca usando este formato WhatsApp OBLIGATORIO:")
         lines.append("        *Equipos [Marca] disponibles:*")
-        lines.append("        Opción 1️⃣: [caracteristicas equipo 1 traducidas]")
-        lines.append("        Opción 2️⃣: [caracteristicas equipo 2 traducidas]")
-        lines.append("        Opción 3️⃣: [caracteristicas equipo 3 traducidas]")
+        lines.append("        Opción 1️⃣: *[Marca ModeloCorto]* — [caracteristicas equipo 1 traducidas]")
+        lines.append("        Opción 2️⃣: *[Marca ModeloCorto]* — [caracteristicas equipo 2 traducidas]")
+        lines.append("        Opción 3️⃣: *[Marca ModeloCorto]* — [caracteristicas equipo 3 traducidas]")
         lines.append("        _(y así sucesivamente para cada equipo de esa marca)_")
         lines.append("        ¿Cuál de estas opciones prefieres y cuánto tiempo necesitarías el equipo?")
+        lines.append("     IDENTIFICADOR DE EQUIPO OBLIGATORIO:")
+        lines.append("        Cada opción DEBE empezar con *Marca ModeloCorto* en negrita, tal como aparece entre corchetes en la lista interna (ej: [HP 15-bc] → *HP 15-bc*).")
         lines.append("     TRADUCCIÓN OBLIGATORIA de términos técnicos a lenguaje comprensible:")
         lines.append("        - i3-xxx / i5-xxx / i7-xxx / i9-xxx / Ryzen X → 'procesador i3-xxx' / 'procesador i5-xxx' etc.")
         lines.append("        - SSD XXX GB → 'disco SSD de XXX GB'")
@@ -510,12 +517,26 @@ class SheetsService:
         lines.append("     ❌ PROHIBIDO usar guiones, puntos o bullets. Usar siempre 'Opción 1️⃣:' 'Opción 2️⃣:' etc.")
         lines.append("  3. Continúa con el PASO 2 (duración).")
         lines.append("  4. Si no hay equipos del tipo solicitado, informa y menciona qué tipos sí tienen disponibilidad.")
-        lines.append("- ❌ NUNCA menciones modelos concretos ni nombres de modelo.")
+        lines.append("- ✅ USA el identificador abreviado marca+modelo (ej: *HP 15-bc*) al inicio de cada opción. ❌ NUNCA uses el nombre completo del modelo.")
         lines.append("- ❌ NUNCA listes marcas ni características sin que el cliente haya indicado primero el tipo.")
         lines.append("- ❌ NUNCA ofrezcas un tipo diferente al solicitado sin antes informar de que no hay del tipo pedido.")
         lines.append("- La disponibilidad final siempre la confirma un asistente.")
 
         return "\n".join(lines)
+
+
+def _shorten_model(model: str) -> str:
+    """Shorten a full model identifier to its family prefix.
+
+    Examples: '15-bc450ns' -> '15-bc', 'Pavilion-15CW1234' -> 'Pavilion-15CW'
+    Short models (<= 8 chars) are returned as-is.
+    """
+    if not model or len(model) <= 8:
+        return model
+    shortened = re.sub(r"\d{3,}\w*$", "", model).rstrip("-_ ")
+    if shortened and len(shortened) >= 3:
+        return shortened
+    return model[:8]
 
 
 def _format_single_repair(r: dict) -> list[str]:
