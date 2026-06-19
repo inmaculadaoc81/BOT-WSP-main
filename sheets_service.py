@@ -406,18 +406,24 @@ class SheetsService:
         records = await self._fetch_all_equipos()
         available = []
         for r in records:
+            marca = str(r.get("marca", "")).strip()
+            modelo = str(r.get("modelo", "")).strip()
             activo = str(r.get("activo", "")).strip().lower()
             estado = str(r.get("estado", "")).strip().lower()
             defectos = str(r.get("defectos", "")).strip()
             observaciones = str(r.get("observaciones", "")).strip()
 
             if activo not in ("si", "sí", "1", "true", "yes", "s"):
+                logger.debug("Equipo excluido (activo=%r): %s %s", activo, marca, modelo)
                 continue
             if estado != "disponible":
+                logger.debug("Equipo excluido (estado=%r): %s %s", estado, marca, modelo)
                 continue
             if defectos:
+                logger.debug("Equipo excluido (defectos=%r): %s %s", defectos, marca, modelo)
                 continue
             if observaciones:
+                logger.debug("Equipo excluido (observaciones=%r): %s %s", observaciones, marca, modelo)
                 continue
 
             available.append({
@@ -521,6 +527,14 @@ class SheetsService:
         lines.append("- ❌ NUNCA listes marcas ni características sin que el cliente haya indicado primero el tipo.")
         lines.append("- ❌ NUNCA ofrezcas un tipo diferente al solicitado sin antes informar de que no hay del tipo pedido.")
         lines.append("- La disponibilidad final siempre la confirma un asistente.")
+        lines.append("")
+        lines.append("REGLA — CONSULTA POR OPCIÓN MÁS ECONÓMICA:")
+        lines.append("Si el cliente pregunta por la opción más barata, más económica o de menor precio:")
+        lines.append("  1. Identifica el tipo de equipo solicitado (Windows, Mac, Surface, Gaming).")
+        lines.append("  2. Selecciona las 3 opciones de menor coste de marcas DISTINTAS dentro de ese tipo.")
+        lines.append("  3. Muestra SOLO esas 3 alternativas con formato: *Marca ModeloCorto* — características traducidas.")
+        lines.append("  4. ❌ NO listes todas las opciones ni catálogos completos.")
+        lines.append("  5. Prioriza una respuesta breve y orientada a facilitar la decisión del cliente.")
 
         return "\n".join(lines)
 
