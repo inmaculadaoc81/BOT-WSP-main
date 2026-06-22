@@ -52,6 +52,9 @@ calendar_svc = CalendarService()
 
 # Marcadores del flujo de cita/recogida que aparecen en el último mensaje del bot
 # cuando está pidiendo al cliente que confirme el resumen antes de registrar.
+SURVEY_LABEL = "encuesta_reseña_pendiente"
+SURVEY_RESPONSES = {"muy bueno", "bueno", "malo", "muy malo"}
+
 APPOINTMENT_FLOW_MARKERS = (
     "Resumen de tu cita",
     "Resumen de tu recogida",
@@ -218,6 +221,20 @@ async def receive_message(request: Request):
 
         text = message["text"]["body"]
         logger.info(f"Message from {sender}: {text}")
+
+        # Survey response interception — ignore chatbot processing when the
+        # conversation has the encuesta_reseña_pendiente label and the client
+        # replies with one of the four valid survey options.
+        if text.strip().lower() in SURVEY_RESPONSES:
+            conv_id = await chatwoot_svc.find_conversation_by_phone(sender)
+            if conv_id:
+                labels = await chatwoot_svc.get_conversation_labels(conv_id)
+                if SURVEY_LABEL in labels:
+                    logger.info(
+                        f"Survey response '{text}' intercepted for {sender} "
+                        f"(conversation {conv_id}, label: {SURVEY_LABEL})"
+                    )
+                    return {"status": "survey_response_ignored"}
 
         # Per-phone rate limiting
         recent = await db.count_recent_messages(sender, seconds=PHONE_RATE_WINDOW)
