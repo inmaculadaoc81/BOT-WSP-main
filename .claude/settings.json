@@ -5,7 +5,9 @@
       "Bash(cmdkey /delete:git:https://github.com)",
       "Bash(cmdkey /delete:LegacyGeneric:target=git:https://github.com)",
       "Bash(python -c \"import ast; [ast.parse\\(open\\(f, encoding='utf-8'\\).read\\(\\)\\) for f in ['espocrm_service.py', 'config.py', 'main.py', 'database.py']]; print\\('OK'\\)\")",
-      "Bash(python -c \"from config import settings; sp = settings.SYSTEM_PROMPT; print\\(f'chars={len\\(sp\\)}, lineas={sp.count\\(chr\\(10\\)\\)}, tokens_approx={len\\(sp\\)//4}'\\)\")"
+      "Bash(python -c \"from config import settings; sp = settings.SYSTEM_PROMPT; print\\(f'chars={len\\(sp\\)}, lineas={sp.count\\(chr\\(10\\)\\)}, tokens_approx={len\\(sp\\)//4}'\\)\")",
+      "Bash(git -C f:/BOT-WSP-main-main commit -m ' *)",
+      "Bash(git -C \"f:/BOT-WSP-main-main\" add calendar_service.py)"
     ]
   }
 }

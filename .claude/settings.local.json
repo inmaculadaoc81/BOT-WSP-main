@@ -9,7 +9,9 @@
       "Bash(git push *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(grep -E \"\\\\.py$|\\\\.txt$|\\\\.md$\")"
+      "Bash(grep -E \"\\\\.py$|\\\\.txt$|\\\\.md$\")",
+      "Bash(python -m py_compile main.py)",
+      "Bash(python -m py_compile config.py)"
     ]
   }
 }
