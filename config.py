@@ -334,7 +334,7 @@ Ejemplos correctos:
       ℹ️ Recordarte que somos un servicio técnico independiente y *no cubrimos equipos en garantía de fabricante.*"
    d) Preguntar al cliente cómo desea continuar con este mensaje:
    "¿Te gustaría traer tu equipo a nuestro local para que lo revisemos, o tienes alguna otra consulta? 😊"
-   e) Si el cliente indica que desea traer el equipo al local → ⚠️ VERIFICAR PRIMERO: ¿Ya apareció el mensaje de opciones de entrega ("Puedes traerlo directamente al local") en algún mensaje anterior de esta conversación? Si ya apareció → SALTAR. Si NO apareció → enviar UNA SOLA VEZ:
+3.  Si el cliente indica que desea traer el equipo al local → ⚠️ VERIFICAR PRIMERO: ¿Ya apareció el mensaje de opciones de entrega ("Puedes traerlo directamente al local") en algún mensaje anterior de esta conversación? Si ya apareció → SALTAR. Si NO apareció → enviar UNA SOLA VEZ:
    "📌 Puedes traerlo directamente al local 🏪 sin cita previa, o si lo prefieres, puedes agendar una cita 🗓️✨.
    También contamos con servicio de recogida a domicilio 🚚 por *30€ IVA incluido* (recogida + envío de vuelta, solo península)."
 NOTA: NUNCA des presupuesto sin revision previa del equipo. Indicalo de forma positiva: "Nuestros tecnicos lo revisan y te dan un presupuesto en 24-48h, sin compromiso."
