@@ -351,8 +351,8 @@ class CalendarService:
             f"Si el cliente quiere ALQUILAR un ordenador, NO uses el protocolo de cita ni el de envio.\n"
             f"❌ NUNCA pidas 'motivo (equipo + problema)' para un alquiler. El alquiler no tiene motivo de reparacion.\n"
             f"❌ NUNCA uses CONFIRMAR_CITA ni CONFIRMAR_ENVIO para un alquiler.\n"
-            f"✅ Para alquiler, sigue las instrucciones del SERVICIO DE ALQUILER DE ORDENADORES (PASOS 1-6) del sistema principal.\n"
-            f"✅ Para alquiler con envio a domicilio, usa CONFIRMAR_ALQUILER (distinto comando, distinto protocolo)."
+            f"✅ Para alquiler, sigue las instrucciones del SERVICIO DE ALQUILER DE ORDENADORES (PASOS 1-5) del sistema principal.\n"
+            f"✅ Para alquiler con envio a domicilio, envia directamente el enlace de pago (NO pidas datos personales) y usa CONFIRMAR_ALQUILER."
         )
 
 
@@ -498,7 +498,13 @@ def _validate_appointment(
     cmd_type = command.get("type", "")
 
     # Nombre: el LLM lo emite en la linea CONFIRMAR; comprobamos que sea real.
-    if not _is_real_name(command.get("customer_name", "")):
+    # Para alquiler a domicilio el cliente completa datos en el enlace de pago, se acepta "Pendiente".
+    customer_name = command.get("customer_name", "")
+    es_alquiler_domicilio = (
+        cmd_type == "alquiler"
+        and "domicilio" in (command.get("modalidad") or "").strip().lower()
+    )
+    if not es_alquiler_domicilio and not _is_real_name(customer_name):
         missing.append("nombre completo del cliente")
 
     # Motivo: solo para cita y envio (no para alquiler en tienda).
@@ -507,12 +513,12 @@ def _validate_appointment(
         if not reason or len(reason) < 3:
             missing.append("motivo (equipo + problema)")
 
-    # Para alquiler en tienda (walk-in): solo se necesita nombre.
-    # Para alquiler a domicilio: se necesitan también email, teléfono y dirección.
+    # Para alquiler (tienda o domicilio): no se piden datos por chat.
+    # Para alquiler a domicilio el cliente completa sus datos en el enlace de pago.
     modalidad_alquiler = (command.get("modalidad") or "").strip().lower()
-    es_alquiler_tienda = cmd_type == "alquiler" and "tienda" in modalidad_alquiler
+    es_alquiler = cmd_type == "alquiler"
 
-    if not es_alquiler_tienda:
+    if not es_alquiler:
         # Email: tiene que estar en algun mensaje del cliente.
         if not _EMAIL_RE.search(history_text):
             missing.append("correo electronico")
@@ -569,9 +575,7 @@ def _validate_appointment(
         if not modalidad:
             missing.append("modalidad de entrega (tienda o domicilio)")
         elif "domicilio" in modalidad or "envio" in modalidad:
-            info = (command.get("info_entrega") or "").strip()
-            if not info or len(info.split()) < 3 or not any(c.isdigit() for c in info):
-                missing.append("direccion completa para el envio")
+            pass  # datos se completan en el enlace de pago
 
     return (len(missing) == 0, missing)
 

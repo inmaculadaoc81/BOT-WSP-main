@@ -32,8 +32,8 @@ class TestGetAppointmentContext:
 
     def test_contains_cita_vs_envio_distinction(self):
         result = self.svc.get_appointment_context()
-        assert "CITA: el cliente viene al local" in result
-        assert "ENVIO: se envia un mensajero" in result
+        assert "PROTOCOLO DE CITA (cliente viene al local)" in result
+        assert "PROTOCOLO DE ENVIO (mensajero recoge a domicilio)" in result
 
     def test_contains_address_requirement_for_envio(self):
         result = self.svc.get_appointment_context()
