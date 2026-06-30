@@ -192,6 +192,22 @@ class ChatwootService:
             logger.error(f"Error assigning agent {agent_id} to conversation {conversation_id}: {e}", exc_info=True)
             return False
 
+    async def get_conversation_labels(self, conversation_id: int) -> list[str]:
+        """
+        Return the current labels of a conversation, normalized to lowercase.
+        """
+        url = f"{self.api_base}/conversations/{conversation_id}/labels"
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.get(url, headers=self.headers)
+                response.raise_for_status()
+                data = response.json()
+                labels = data.get("payload", [])
+                return [label.lower() for label in labels]
+        except Exception as e:
+            logger.error(f"Error fetching labels for conversation {conversation_id}: {e}", exc_info=True)
+            raise
+
     async def handoff_to_agent(self, conversation_id: int) -> dict:
         """
         Toggle conversation status to 'open' so a human agent takes over.

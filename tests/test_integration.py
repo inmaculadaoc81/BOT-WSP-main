@@ -105,6 +105,7 @@ def _mock_external_services():
         cw.find_conversation_by_phone = AsyncMock(return_value=999)
         cw.handoff_to_agent = AsyncMock(return_value={"status": "open"})
         cw.assign_handoff_agent = AsyncMock(return_value=13)
+        cw.get_conversation_labels = AsyncMock(return_value=[])
 
         sh.get_repairs_by_phone = AsyncMock(return_value=[])
         sh.get_all_prices = AsyncMock(return_value=[])
@@ -840,3 +841,104 @@ class TestHandoff:
         # Mode still set to human despite Chatwoot failure
         mode = await _isolated_db.get_conversation_mode("34600111222")
         assert mode == "human"
+
+
+# ===========================================================================
+# Survey response exclusion (encuesta de satisfacción ↔ n8n)
+# ===========================================================================
+
+
+class TestSurveyResponseExclusion:
+    @pytest.mark.parametrize(
+        "raw_text,expected_normalized",
+        [
+            ("Muy bueno", "muy bueno"),
+            ("Bueno", "bueno"),
+            ("Malo", "malo"),
+            ("Muy malo", "muy malo"),
+            ("   MUY MALO", "muy malo"),
+        ],
+    )
+    async def test_survey_response_with_pending_label_is_ignored(
+        self, client, mock_intent, mock_openai_generate, _mock_external_services,
+        raw_text, expected_normalized,
+    ):
+        """Exact survey response + pending survey label → bot ignores it, no LLM call."""
+        _mock_external_services["chatwoot"].get_conversation_labels.return_value = [
+            "encuesta_reseña_pendiente",
+            "encuesta_destino_kelatos",
+        ]
+
+        resp = await client.post("/chatwoot/webhook", json=_chatwoot_webhook_body(501, raw_text))
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "survey_response_ignored"
+        assert body["survey_response"] == expected_normalized
+
+        mock_openai_generate.generate_response.assert_not_called()
+        _mock_external_services["chatwoot"].send_message.assert_not_called()
+        _mock_external_services["chatwoot"].get_conversation_labels.assert_called_once_with(501)
+
+    async def test_survey_response_without_label_processes_normally(
+        self, client, mock_intent, mock_openai_generate, _mock_external_services,
+    ):
+        """'Bueno' without the pending label is just a normal message to the bot."""
+        _mock_external_services["chatwoot"].get_conversation_labels.return_value = ["cliente_recurrente"]
+        mock_openai_generate.generate_response.return_value = "Hola desde Chatwoot."
+
+        resp = await client.post("/chatwoot/webhook", json=_chatwoot_webhook_body(502, "Bueno"))
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+        mock_openai_generate.generate_response.assert_called_once()
+        _mock_external_services["chatwoot"].get_conversation_labels.assert_called_once_with(502)
+
+    async def test_non_exact_survey_text_processes_normally_without_label_check(
+        self, client, mock_intent, mock_openai_generate, _mock_external_services,
+    ):
+        """'Bueno, también quería consultar otra cosa' is not an exact match → no label lookup."""
+        mock_openai_generate.generate_response.return_value = "Claro, dime."
+
+        resp = await client.post(
+            "/chatwoot/webhook",
+            json=_chatwoot_webhook_body(503, "Bueno, necesito ayuda"),
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+        mock_openai_generate.generate_response.assert_called_once()
+        _mock_external_services["chatwoot"].get_conversation_labels.assert_not_called()
+
+    async def test_normal_message_with_pending_label_processes_normally(
+        self, client, mock_intent, mock_openai_generate, _mock_external_services,
+    ):
+        """A normal question must not be blocked by the survey label, and no label lookup happens."""
+        _mock_external_services["chatwoot"].get_conversation_labels.return_value = [
+            "encuesta_reseña_pendiente"
+        ]
+        mock_openai_generate.generate_response.return_value = "Tu equipo estará listo el viernes."
+
+        resp = await client.post(
+            "/chatwoot/webhook",
+            json=_chatwoot_webhook_body(504, "Necesito saber cuándo estará listo mi ordenador"),
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+        mock_openai_generate.generate_response.assert_called_once()
+        _mock_external_services["chatwoot"].get_conversation_labels.assert_not_called()
+
+    async def test_label_lookup_failure_fails_open(
+        self, client, mock_intent, mock_openai_generate, _mock_external_services,
+    ):
+        """If the Chatwoot labels endpoint errors out, the bot still answers (fail-open)."""
+        _mock_external_services["chatwoot"].get_conversation_labels.side_effect = Exception("Chatwoot down")
+        mock_openai_generate.generate_response.return_value = "Hola desde Chatwoot."
+
+        resp = await client.post("/chatwoot/webhook", json=_chatwoot_webhook_body(505, "Malo"))
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+        mock_openai_generate.generate_response.assert_called_once()
+        _mock_external_services["chatwoot"].send_message.assert_called_once()

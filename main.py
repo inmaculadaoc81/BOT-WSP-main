@@ -91,6 +91,18 @@ BUDGET_DECISION_RESPONSE = (
     "confirmación. 😊"
 )
 
+# Etiqueta que n8n añade a la conversación mientras espera la respuesta del
+# cliente a la encuesta de satisfacción. Si está presente, el bot debe
+# ignorar la respuesta para que no compitan ambos sistemas por contestar.
+SURVEY_LABEL = "encuesta_reseña_pendiente"
+
+SURVEY_RESPONSES = {
+    "muy bueno",
+    "bueno",
+    "malo",
+    "muy malo",
+}
+
 
 def _is_budget_decision(text: str, history: list[dict]) -> bool:
     """True si el mensaje es una aceptación o rechazo de presupuesto."""
@@ -653,6 +665,39 @@ async def chatwoot_webhook(request: Request):
         if not conversation_id:
             logger.warning("Missing conversation_id in Chatwoot webhook")
             return {"status": "missing data"}
+
+        # Survey response exclusion: si el texto es exactamente una de las
+        # respuestas de la encuesta de satisfacción y la conversación está
+        # marcada por n8n como pendiente de esa encuesta, el bot debe
+        # ignorar el mensaje para que no compitan ambos sistemas por
+        # responder al cliente. Se comprueba antes de cualquier otro
+        # procesamiento (prompt, LLM, guardado de historial, etc.) y solo
+        # consulta las etiquetas de Chatwoot cuando el texto coincide
+        # exactamente, para no añadir overhead al resto de mensajes.
+        normalized_text = content.strip().lower()
+        if normalized_text in SURVEY_RESPONSES:
+            try:
+                labels = await chatwoot_svc.get_conversation_labels(conversation_id)
+                if SURVEY_LABEL in labels:
+                    log_response = normalized_text.replace(" ", "_")
+                    logger.info(
+                        f"event=survey_response_ignored conversation_id={conversation_id} "
+                        f"survey_response={log_response} reason=pending_survey_label"
+                    )
+                    return {
+                        "status": "survey_response_ignored",
+                        "conversation_id": conversation_id,
+                        "survey_response": normalized_text,
+                    }
+            except Exception:
+                log_response = normalized_text.replace(" ", "_")
+                logger.exception(
+                    f"event=survey_label_check_failed conversation_id={conversation_id} "
+                    f"survey_response={log_response}"
+                )
+                # Fail-open: la consulta de etiquetas falló, se continúa con
+                # el procesamiento normal del bot para no dejar al cliente
+                # sin respuesta.
 
         # Detect attachments (images, audio, video, files) or empty content
         attachments = body.get("attachments", [])
