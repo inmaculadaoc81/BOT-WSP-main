@@ -640,6 +640,32 @@ async def chatwoot_webhook(request: Request):
                 conversation = body.get("conversation", {})
                 conv_id = conversation.get("id")
                 if conv_id:
+                    # Si el mensaje saliente pertenece a la encuesta de
+                    # satisfacción (por etiqueta o por nombre de plantilla),
+                    # el bot no debe activar human mode: ese mensaje lo envía
+                    # n8n y no implica que un agente humano haya tomado la
+                    # conversación.
+                    outgoing_labels = [
+                        l.lower()
+                        for l in conversation.get("labels", [])
+                    ]
+                    template_name = (
+                        body.get("additional_attributes", {})
+                        .get("template_params", {})
+                        .get("name", "")
+                        or ""
+                    )
+                    if (
+                        SURVEY_LABEL in outgoing_labels
+                        or template_name == "encuesta_satisfaccion_servicio_v2"
+                    ):
+                        logger.info(
+                            f"event=survey_outgoing_ignored "
+                            f"conversation_id={conv_id} "
+                            f"template_name={template_name or 'none'}"
+                        )
+                        return {"status": "survey_outgoing_ignored"}
+
                     sender_key = f"chatwoot_{conv_id}"
                     await db.set_conversation_mode(sender_key, "human")
 
@@ -676,9 +702,13 @@ async def chatwoot_webhook(request: Request):
         # exactamente, para no añadir overhead al resto de mensajes.
         normalized_text = content.strip().lower()
         if normalized_text in SURVEY_RESPONSES:
-            try:
-                labels = await chatwoot_svc.get_conversation_labels(conversation_id)
-                if SURVEY_LABEL in labels:
+            # Chatwoot incluye las etiquetas actuales en el propio payload del
+            # webhook (conversation.labels). Si están presentes se usan
+            # directamente para evitar la llamada HTTP. Solo si el payload no
+            # incluye etiquetas se hace la consulta como fallback.
+            payload_labels = [l.lower() for l in conversation.get("labels", [])]
+            if payload_labels:
+                if SURVEY_LABEL in payload_labels:
                     log_response = normalized_text.replace(" ", "_")
                     logger.info(
                         f"event=survey_response_ignored conversation_id={conversation_id} "
@@ -689,15 +719,32 @@ async def chatwoot_webhook(request: Request):
                         "conversation_id": conversation_id,
                         "survey_response": normalized_text,
                     }
-            except Exception:
-                log_response = normalized_text.replace(" ", "_")
-                logger.exception(
-                    f"event=survey_label_check_failed conversation_id={conversation_id} "
-                    f"survey_response={log_response}"
-                )
-                # Fail-open: la consulta de etiquetas falló, se continúa con
-                # el procesamiento normal del bot para no dejar al cliente
-                # sin respuesta.
+                # El payload tiene etiquetas pero ninguna es la de encuesta →
+                # procesamiento normal, sin llamada HTTP adicional.
+            else:
+                # El payload no incluye etiquetas — usar HTTP como fallback.
+                try:
+                    labels = await chatwoot_svc.get_conversation_labels(conversation_id)
+                    if SURVEY_LABEL in labels:
+                        log_response = normalized_text.replace(" ", "_")
+                        logger.info(
+                            f"event=survey_response_ignored conversation_id={conversation_id} "
+                            f"survey_response={log_response} reason=pending_survey_label"
+                        )
+                        return {
+                            "status": "survey_response_ignored",
+                            "conversation_id": conversation_id,
+                            "survey_response": normalized_text,
+                        }
+                except Exception:
+                    log_response = normalized_text.replace(" ", "_")
+                    logger.exception(
+                        f"event=survey_label_check_failed conversation_id={conversation_id} "
+                        f"survey_response={log_response}"
+                    )
+                    # Fail-open: la consulta de etiquetas falló, se continúa
+                    # con el procesamiento normal del bot para no dejar al
+                    # cliente sin respuesta.
 
         # Detect attachments (images, audio, video, files) or empty content
         attachments = body.get("attachments", [])
@@ -925,3 +972,24 @@ async def chatwoot_webhook(request: Request):
     except Exception as e:
         logger.error(f"Error processing Chatwoot webhook: {e}", exc_info=True)
         return {"status": "error"}
+
+
+# ── Admin: reset conversation mode ──────────────────────────────────────────
+
+
+@app.post("/admin/reset-conversation/{conversation_id}")
+async def reset_conversation_mode(conversation_id: int, request: Request):
+    """
+    Fuerza el restablecimiento al modo bot de una conversación de Chatwoot.
+    Requiere el mismo token que usa Meta para verificar el webhook (VERIFY_TOKEN).
+    Útil para corregir conversaciones que quedaron bloqueadas en human mode
+    por mensajes automáticos de n8n antes de aplicar la exclusión de encuesta.
+    """
+    token = request.headers.get("x-admin-token", "")
+    if token != settings.VERIFY_TOKEN:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    sender_key = f"chatwoot_{conversation_id}"
+    await db.set_conversation_mode(sender_key, "bot")
+    logger.info(f"Admin reset: conversation {conversation_id} restored to bot mode")
+    return {"status": "reset", "conversation_id": conversation_id, "mode": "bot"}

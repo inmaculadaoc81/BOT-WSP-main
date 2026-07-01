@@ -199,7 +199,7 @@ class ChatwootService:
         url = f"{self.api_base}/conversations/{conversation_id}/labels"
         try:
             async with httpx.AsyncClient(timeout=15) as client:
-                response = await client.get(url, headers=self.headers)
+                response = await client.get(url, headers=self.admin_headers)
                 response.raise_for_status()
                 data = response.json()
                 labels = data.get("payload", [])
