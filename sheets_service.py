@@ -359,11 +359,10 @@ class SheetsService:
             lines.append(f"\nREPARACIONES ANTERIORES FINALIZADAS: {len(closed)}")
             lines.append("Detalle disponible solo si el cliente pregunta por un resguardo concreto.\n")
             for r in closed:
-                estado_entrega = r.get("estado_entrega", "")
                 lines.append(
                     f"  Resguardo {r.get('resguardo', '?')} | "
                     f"{r.get('equipo_modelo', '?')} | "
-                    f"{estado_entrega}"
+                    f"{r.get('estado', '?')}"
                 )
             lines.append("")
 
