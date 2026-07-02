@@ -144,7 +144,10 @@ class SheetsService:
 
         try:
             sheet = self._client.open_by_key(settings.GOOGLE_SHEETS_ID).worksheet("Reparaciones")
-            raw_records = sheet.get_all_records()
+            # expected_headers evita que gspread rechace la hoja si hay columnas
+            # duplicadas o celdas de cabecera vacias mas alla de las que usamos
+            # (solo exige que REPAIR_COLUMNS exista, no que TODAS sean unicas).
+            raw_records = sheet.get_all_records(expected_headers=REPAIR_COLUMNS)
             records = [_normalize_headers(r) for r in raw_records]
             self._cache = records
             self._cache_time = time.time()
