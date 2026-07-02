@@ -16,6 +16,19 @@ from tests.conftest import make_completion
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _future_appointment_iso() -> str:
+    """A weekday 11:00 Madrid-time slot far enough ahead to stay valid (avoids
+    hardcoding a date that eventually lands in the past)."""
+    from datetime import datetime, timedelta
+    from calendar_service import MADRID_TZ, _HOLIDAYS
+
+    dt = (datetime.now(MADRID_TZ) + timedelta(days=14)).replace(
+        hour=11, minute=0, second=0, microsecond=0
+    )
+    while dt.weekday() >= 5 or dt.strftime("%m-%d") in _HOLIDAYS:
+        dt += timedelta(days=1)
+    return dt.isoformat()
+
 def _whatsapp_webhook_body(sender: str, text: str) -> dict:
     """Build a minimal Meta WhatsApp webhook payload."""
     return {
@@ -295,7 +308,11 @@ class TestWhatsAppWebhookFlow:
         assert call_kwargs["brand_faq"] == "Dyson FAQ content"
 
     async def test_resguardo_lookup_when_no_phone_match(self, client, mock_intent, mock_openai_generate, _mock_external_services):
-        """When no repairs by phone, a resguardo number in message triggers resguardo lookup."""
+        """When no repairs by phone, a resguardo number in message triggers resguardo lookup.
+
+        Since 2026-04-21 the resguardo lookup is intentionally phone-agnostic
+        (the client giving the resguardo is enough), so no phone is passed.
+        """
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
         _mock_external_services["sheets"].get_repairs_by_phone.return_value = []
@@ -306,12 +323,12 @@ class TestWhatsAppWebhookFlow:
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "mi resguardo es 17058"))
 
         assert resp.status_code == 200
-        _mock_external_services["sheets"].get_repair_by_resguardo.assert_called_once_with("17058", "34600111222")
+        _mock_external_services["sheets"].get_repair_by_resguardo.assert_called_once_with("17058")
         call_kwargs = mock_openai_generate.generate_response.call_args.kwargs
         assert call_kwargs["extra_context"] is not None
 
-    async def test_resguardo_wrong_phone_security_message(self, client, mock_intent, mock_openai_generate, _mock_external_services):
-        """When resguardo doesn't belong to caller, security message is injected."""
+    async def test_resguardo_not_found_message(self, client, mock_intent, mock_openai_generate, _mock_external_services):
+        """When the resguardo number doesn't exist, the bot asks the client to double-check it."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
         _mock_external_services["sheets"].get_repairs_by_phone.return_value = []
@@ -321,10 +338,10 @@ class TestWhatsAppWebhookFlow:
 
         assert resp.status_code == 200
         call_kwargs = mock_openai_generate.generate_response.call_args.kwargs
-        assert "seguridad" in call_kwargs["extra_context"]
+        assert "No se encontro ningun resguardo con el numero 17058" in call_kwargs["extra_context"]
 
-    async def test_no_repairs_at_all_security_message(self, client, mock_intent, mock_openai_generate, _mock_external_services):
-        """When no repairs found by phone and no resguardo in message, security message shown."""
+    async def test_no_repairs_at_all_asks_for_resguardo(self, client, mock_intent, mock_openai_generate, _mock_external_services):
+        """When no repairs found by phone and no resguardo in message, the bot asks for the resguardo."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
         _mock_external_services["sheets"].get_repairs_by_phone.return_value = []
@@ -333,15 +350,15 @@ class TestWhatsAppWebhookFlow:
 
         assert resp.status_code == 200
         call_kwargs = mock_openai_generate.generate_response.call_args.kwargs
-        assert "seguridad" in call_kwargs["extra_context"]
-        assert "numero de movil registrado" in call_kwargs["extra_context"]
+        assert "numero de resguardo" in call_kwargs["extra_context"]
 
-    async def test_cita_creates_calendar_event(self, client, mock_intent, mock_openai_generate, _mock_external_services):
+    async def test_cita_creates_calendar_event(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
         """AI responds with CONFIRMAR_CITA → calendar event created, clean response sent."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(wants_appointment=True)
+        await _isolated_db.save_message("34600111222", "user", "mi correo es juan@example.com")
         mock_openai_generate.generate_response.return_value = (
-            "Tu cita queda registrada.\nCONFIRMAR_CITA|2026-04-01T10:00:00+02:00|Juan Garcia|Reparacion portatil"
+            f"Tu cita queda registrada.\nCONFIRMAR_CITA|{_future_appointment_iso()}|Juan Garcia|Reparacion portatil"
         )
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "quiero cita manana"))
@@ -351,20 +368,21 @@ class TestWhatsAppWebhookFlow:
         # Calendar event was created
         _mock_external_services["calendar"].create_event.assert_called_once()
         call_kwargs = _mock_external_services["calendar"].create_event.call_args.kwargs
-        assert call_kwargs["title"] == "Cita: Juan Garcia - Reparacion portatil"
+        assert call_kwargs["title"] == "CITA: Juan Garcia"
 
-        # WhatsApp received clean response (no CONFIRMAR_CITA line)
+        # WhatsApp received clean confirmation (no CONFIRMAR_CITA line)
         wa_text = _mock_external_services["whatsapp"].send_message.call_args.kwargs["text"]
         assert "CONFIRMAR_CITA" not in wa_text
-        assert "Tu cita queda registrada." in wa_text
+        assert "Tu cita ha sido registrada" in wa_text
 
-    async def test_envio_creates_calendar_event_with_address(self, client, mock_intent, mock_openai_generate, _mock_external_services):
-        """AI responds with CONFIRMAR_ENVIO → calendar event with address and cost."""
+    async def test_envio_creates_calendar_event_with_address(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
+        """AI responds with CONFIRMAR_ENVIO → calendar event with address, payment link sent to client."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(wants_appointment=True)
+        await _isolated_db.save_message("34600111222", "user", "mi correo es maria@example.com")
         mock_openai_generate.generate_response.return_value = (
             "Recogida confirmada.\n"
-            "CONFIRMAR_ENVIO|2026-04-01T10:00:00+02:00|Maria Lopez|Dyson V15|Calle Gran Via 10, Madrid"
+            "CONFIRMAR_ENVIO|2026-04-01T10:00:00+02:00|Maria Lopez|Dyson V15|Calle Gran Via 10, Madrid|12345678A"
         )
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "quiero envio"))
@@ -372,26 +390,28 @@ class TestWhatsAppWebhookFlow:
         assert resp.status_code == 200
 
         call_kwargs = _mock_external_services["calendar"].create_event.call_args.kwargs
-        assert call_kwargs["title"] == "Envío: Maria Lopez - Dyson V15"
+        assert call_kwargs["title"] == "RECOGIDA: Maria Lopez"
         assert "Dirección: Calle Gran Via 10, Madrid" in call_kwargs["description"]
-        assert "15€" in call_kwargs["description"]
+        assert "DNI/NIE/CIF: 12345678A" in call_kwargs["description"]
 
         wa_text = _mock_external_services["whatsapp"].send_message.call_args.kwargs["text"]
+        assert "30€" in wa_text
         assert "CONFIRMAR_ENVIO" not in wa_text
 
-    async def test_calendar_failure_appends_error(self, client, mock_intent, mock_openai_generate, _mock_external_services):
-        """If calendar event creation fails, user gets error message appended."""
+    async def test_calendar_failure_appends_error(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
+        """If calendar event creation fails, user gets a graceful fallback message."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(wants_appointment=True)
+        await _isolated_db.save_message("34600111222", "user", "mi correo es juan@example.com")
         mock_openai_generate.generate_response.return_value = (
-            "Ok.\nCONFIRMAR_CITA|2026-04-01T10:00:00+02:00|Juan|Repair"
+            f"Ok.\nCONFIRMAR_CITA|{_future_appointment_iso()}|Juan Garcia|Repair"
         )
         _mock_external_services["calendar"].create_event.return_value = None
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "cita"))
 
         wa_text = _mock_external_services["whatsapp"].send_message.call_args.kwargs["text"]
-        assert "Hubo un problema" in wa_text
+        assert "no he podido registrarla automáticamente" in wa_text
 
     async def test_non_text_message_ignored(self, client, _mock_external_services):
         """Non-text messages get a polite rejection."""
@@ -478,8 +498,9 @@ class TestChatwootWebhookFlow:
         # Chatwoot received the reply
         _mock_external_services["chatwoot"].send_message.assert_called_once_with(101, "Hola desde Chatwoot.")
 
-        # DB has messages under the chatwoot sender key
-        history = await _isolated_db.get_history("chatwoot_101")
+        # DB has messages under the phone key (used for history so context
+        # persists across new conversation_ids from the same client).
+        history = await _isolated_db.get_history("34612345678")
         assert len(history) == 2
 
     async def test_chatwoot_first_message_schedules_espocrm_lead(self, client, mock_intent, mock_openai_generate, _isolated_db, _mock_external_services):
@@ -493,8 +514,9 @@ class TestChatwootWebhookFlow:
 
     async def test_chatwoot_second_message_no_lead(self, client, mock_intent, mock_openai_generate, _isolated_db, _mock_external_services):
         """Second message does not schedule a new EspoCRM lead."""
-        # Pre-populate history so it looks like a returning conversation
-        await _isolated_db.save_message("chatwoot_103", "user", "previous msg")
+        # Pre-populate history under the phone key (used for history so
+        # context persists across new conversation_ids from the same client).
+        await _isolated_db.save_message("34612345678", "user", "previous msg")
 
         resp = await client.post("/chatwoot/webhook", json=_chatwoot_webhook_body(103, "hola otra vez"))
 
@@ -513,12 +535,13 @@ class TestChatwootWebhookFlow:
         assert resp.status_code == 200
         _mock_external_services["sheets"].get_repairs_by_phone.assert_called_once_with("34699887766")
 
-    async def test_chatwoot_envio_with_calendar(self, client, mock_intent, mock_openai_generate, _mock_external_services):
+    async def test_chatwoot_envio_with_calendar(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
         """Chatwoot flow also handles CONFIRMAR_ENVIO correctly."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(wants_appointment=True)
+        await _isolated_db.save_message("34612345678", "user", "mi correo es ana@example.com")
         mock_openai_generate.generate_response.return_value = (
-            "Listo.\nCONFIRMAR_ENVIO|2026-04-01T10:00:00+02:00|Ana|MacBook|Calle Sol 5, Madrid"
+            "Listo.\nCONFIRMAR_ENVIO|2026-04-01T10:00:00+02:00|Ana Ruiz|MacBook|Calle Sol 5, Madrid|12345678A"
         )
 
         resp = await client.post("/chatwoot/webhook", json=_chatwoot_webhook_body(105, "quiero envio"))
@@ -526,11 +549,12 @@ class TestChatwootWebhookFlow:
         assert resp.status_code == 200
         _mock_external_services["calendar"].create_event.assert_called_once()
         call_kwargs = _mock_external_services["calendar"].create_event.call_args.kwargs
-        assert "Envío" in call_kwargs["title"]
+        assert "RECOGIDA" in call_kwargs["title"]
 
-        # Chatwoot got clean response
+        # Chatwoot got the clean payment-link response
         cw_text = _mock_external_services["chatwoot"].send_message.call_args[0][1]
         assert "CONFIRMAR_ENVIO" not in cw_text
+        assert "30€" in cw_text
 
     async def test_chatwoot_ignores_non_incoming(self, client, _mock_external_services):
         """Chatwoot outgoing/activity events are ignored."""
