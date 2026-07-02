@@ -729,6 +729,13 @@ async def process_ai_calendar_command(
             attendee_phone=attendee_phone,
         )
 
+        payment_msg = (
+            "Para tramitar el envío a domicilio, realiza el pago de *30€ (IVA incluido)* "
+            "— envío + recogida al finalizar el alquiler — a través de este enlace, donde también completarás tus datos:\n\n"
+            "💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n\n"
+            "Una vez realizado el pago, envía el comprobante a *soporte@kelatos.com* y nos pondremos en contacto contigo para coordinar la entrega. 🚚"
+        )
+
         if created_event:
             user_message = (
                 f"✅ Tu solicitud de alquiler ha sido registrada.\n\n"
@@ -736,13 +743,10 @@ async def process_ai_calendar_command(
                 f"💻 Equipo: {command['tipo_equipo']}\n"
                 f"📅 Duración: {command['duracion']}\n"
                 f"🚚 Modalidad: {command['modalidad']}\n\n"
-                f"Nos pondremos en contacto contigo lo antes posible para coordinar el pago y confirmar todos los detalles del envío. ¡Gracias! 😊"
+                f"{payment_msg}"
             )
         else:
-            user_message = (
-                "✅ Hemos recibido tu solicitud de alquiler.\n\n"
-                "Nos pondremos en contacto contigo lo antes posible para coordinar el pago y confirmar todos los detalles del envío. ¡Gracias! 😊"
-            )
+            user_message = f"✅ Hemos recibido tu solicitud de alquiler.\n\n{payment_msg}"
 
     elif command["type"] == "devolucion":
         resguardo_info = f"\nNº Resguardo: {command['resguardo']}" if command.get("resguardo") else ""

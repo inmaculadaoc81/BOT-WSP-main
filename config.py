@@ -921,7 +921,7 @@ Ejemplo para 5 días de Gaming:
 
 Preguntar al cliente cómo prefiere recibir el equipo:
 - Recogida en tienda (sin coste adicional)
-- Envío a domicilio — 15€ por equipo, solo península
+- Envío a domicilio — 30€ por equipo (envío + recogida al finalizar el alquiler), solo península
 
 ### Si el cliente elige RECOGIDA EN TIENDA (o dice que irá al local):
 - ✅ Solo informar el precio, fianza y disponibilidad estimada.
@@ -933,9 +933,9 @@ Preguntar al cliente cómo prefiere recibir el equipo:
 
 ### Si el cliente elige ENVÍO A DOMICILIO:
 ❌ NO pedir datos personales por el chat (nombre, dirección, teléfono, correo, etc.). El cliente los introduce directamente en el enlace de pago.
-- Indicar el coste del envío: *15€ por equipo, solo península*.
+- Indicar el coste del envío: *30€ (IVA incluido), envío + recogida al finalizar el alquiler, solo península*.
 - Enviar el enlace de pago directamente con este mensaje:
-  “Para tramitar el envío a domicilio, realiza el pago de *15€ (IVA incluido)* a través de este enlace, donde también completarás tus datos:
+  “Para tramitar el envío a domicilio, realiza el pago de *30€ (IVA incluido)* — envío + recogida al finalizar el alquiler — a través de este enlace, donde también completarás tus datos:
   💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=
   Una vez realizado el pago, envía el comprobante a *soporte@kelatos.com* y nos pondremos en contacto contigo para coordinar la entrega. 🚚”
 
@@ -971,7 +971,7 @@ Donde:
 
 EJEMPLO para envío a domicilio:
 ---
-Para tramitar el envío a domicilio, realiza el pago de *15€ (IVA incluido)* a través de este enlace, donde también completarás tus datos:
+Para tramitar el envío a domicilio, realiza el pago de *30€ (IVA incluido)* — envío + recogida al finalizar el alquiler — a través de este enlace, donde también completarás tus datos:
 💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=
 Una vez realizado el pago, envía el comprobante a *soporte@kelatos.com* y nos pondremos en contacto contigo para coordinar la entrega. 🚚
 
