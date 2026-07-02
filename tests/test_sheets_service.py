@@ -129,7 +129,7 @@ class TestFormatRepairs:
         result = self.svc.format_repairs_for_prompt(repairs)
         assert "REPARACIONES ACTIVAS (1)" in result
         assert "HP Laptop" in result
-        assert "No enciende" in result
+        assert "En Reparacion" in result
 
     def test_closed_repair_in_historial(self):
         repairs = [{"resguardo": "R001", "equipo_modelo": "HP Laptop", "estado": "Reparado", "estado_entrega": "ENTREGADO"}]
@@ -146,10 +146,18 @@ class TestFormatRepairs:
         assert "REPARACIONES ACTIVAS (1)" in result
         assert "REPARACIONES ANTERIORES FINALIZADAS: 1" in result
 
-    def test_envio_shows_en_camino(self):
-        repairs = [{"resguardo": "R001", "equipo_modelo": "HP", "estado": "Reparado", "estado_entrega": "ENVIO"}]
+    def test_active_repair_only_shows_equipo_and_estado(self):
+        """Active repair detail is intentionally limited to equipo_modelo + estado."""
+        repairs = [{
+            "resguardo": "R001", "equipo_modelo": "HP", "estado": "En Reparacion",
+            "estado_entrega": "PENDIENTE", "sintoma": "No enciende", "tecnico_asignado": "Juan",
+        }]
         result = self.svc.format_repairs_for_prompt(repairs)
-        assert "EN CAMINO" in result
+        assert "Equipo: HP" in result
+        assert "Estado: En Reparacion" in result
+        assert "PENDIENTE" not in result
+        assert "No enciende" not in result
+        assert "Juan" not in result
 
 
 # ── format_prices_for_prompt ─────────────────────────────────────────

@@ -564,33 +564,7 @@ def _shorten_model(model: str) -> str:
 
 def _format_single_repair(r: dict) -> list[str]:
     """Format a single repair into readable lines."""
-    lines = [
-        f"Nº Resguardo: {r.get('resguardo', 'N/A')}",
+    return [
         f"Equipo: {r.get('equipo_modelo', 'N/A')}",
-        f"Problema: {r.get('sintoma', 'N/A')}",
         f"Estado: {r.get('estado', 'N/A')}",
-        f"Recibido: {r.get('fecha_recepcion', 'N/A')}",
     ]
-    if r.get("presupuesto_aceptado_id"):
-        lines.append(f"Presupuesto aceptado: {r['presupuesto_aceptado_id']}")
-    if r.get("tecnico_asignado"):
-        lines.append(f"Técnico asignado: {r['tecnico_asignado']}")
-    if r.get("fecha_reparacion"):
-        lines.append(f"Fecha reparación: {r['fecha_reparacion']}")
-    if r.get("resultado_reparacion"):
-        lines.append(f"Resultado: {r['resultado_reparacion']}")
-    if r.get("motivo_sin_reparacion"):
-        lines.append(f"Motivo sin reparación: {r['motivo_sin_reparacion']}")
-    if r.get("fecha_entrega"):
-        lines.append(f"Fecha entrega: {r['fecha_entrega']}")
-    if r.get("estado_entrega"):
-        estado_e = r["estado_entrega"]
-        if estado_e.upper() == "ENVIO":
-            lines.append("Estado entrega: EN CAMINO (enviado al cliente)")
-        else:
-            lines.append(f"Estado entrega: {estado_e}")
-    if r.get("tipo_recepcion"):
-        lines.append(f"Tipo recepción: {r['tipo_recepcion']}")
-    if r.get("entrega_mensajeria"):
-        lines.append(f"Entrega por mensajería: {r['entrega_mensajeria']}")
-    return lines
