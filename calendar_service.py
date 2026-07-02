@@ -705,7 +705,7 @@ async def process_ai_calendar_command(
             "Para tramitar la recogida con Correos es necesario realizar el pago de *30€ (IVA incluido)* "
             "— recogida + envío de vuelta — a través del siguiente enlace:\n\n"
             "💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n\n"
-            "Una vez realizado el pago, envía el comprobante a *soporte@kelatos.com* y gestionamos la recogida con Correos. 🚚"
+            "Una vez realizado el pago, envía el comprobante a soporte@kelatos.com y gestionamos la recogida con Correos. 🚚"
         )
 
         if created_event:
@@ -733,7 +733,7 @@ async def process_ai_calendar_command(
             "Para tramitar el envío a domicilio, realiza el pago de *30€ (IVA incluido)* "
             "— envío + recogida al finalizar el alquiler — a través de este enlace, donde también completarás tus datos:\n\n"
             "💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n\n"
-            "Una vez realizado el pago, envía el comprobante a *soporte@kelatos.com* y nos pondremos en contacto contigo para coordinar la entrega. 🚚"
+            "Una vez realizado el pago, envía el comprobante a soporte@kelatos.com y nos pondremos en contacto contigo para coordinar la entrega. 🚚"
         )
 
         if created_event:
