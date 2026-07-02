@@ -887,8 +887,8 @@ async def chatwoot_webhook(request: Request):
             logger.info(f"Returning session detected for {sender_key} (gap: {gap_hours:.1f}h)")
 
         needs_repair = intent.needs_repair_lookup
-        if needs_repair and phone:
-            repair_ctx = await _repair_lookup(phone, content)
+        if needs_repair:
+            repair_ctx = await _repair_lookup(phone or "", content)
             if repair_ctx:
                 extra_context_parts.append(repair_ctx)
 
