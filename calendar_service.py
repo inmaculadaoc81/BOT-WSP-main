@@ -27,6 +27,38 @@ _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 _PHONE_RE = re.compile(r"(?<!\d)(?:\+?\d[\d\s().-]{7,}\d)(?!\d)")
 _PLACEHOLDER_NAMES = {"cliente", "anonimo", "anónimo", "sin nombre", "n/a", "test", "prueba"}
 
+# Enlaces de pago para alquiler con envio a domicilio de 7 dias o mas (envio gratuito).
+# Segun tipo de equipo: portatiles normales (Windows/Mac) vs Gaming/Microsoft Surface.
+_RENTAL_PAYMENT_LINKS = {
+    "normal": {
+        "rental": "https://sis.redsys.es/tiendaWeb/item/NDk4OzU=",
+        "deposit": "https://sis.redsys.es/tiendaWeb/item/NDk4OzY=",
+    },
+    "gaming_surface": {
+        "rental": "https://sis.redsys.es/tiendaWeb/item/NDk4Ozc=",
+        "deposit": "https://sis.redsys.es/tiendaWeb/item/NDk4Ozg=",
+    },
+}
+
+
+def _rental_duration_is_7_plus_days(duracion: str) -> bool:
+    """True si la duracion del alquiler equivale a 7 dias o mas (envio gratuito)."""
+    text = (duracion or "").strip().lower()
+    if "semana" in text or "mes" in text:
+        return True
+    match = re.search(r"(\d+)\s*d", text)
+    if match:
+        return int(match.group(1)) >= 7
+    return False
+
+
+def _rental_payment_links(tipo_equipo: str) -> dict:
+    """CASO 2 (Gaming/Surface) o CASO 1 (resto) segun el tipo de equipo."""
+    text = (tipo_equipo or "").lower()
+    if "gaming" in text or "surface" in text:
+        return _RENTAL_PAYMENT_LINKS["gaming_surface"]
+    return _RENTAL_PAYMENT_LINKS["normal"]
+
 
 class CalendarService:
     """Google Calendar integration."""
@@ -725,12 +757,27 @@ async def process_ai_calendar_command(
             attendee_phone=attendee_phone,
         )
 
-        payment_msg = (
-            "Para tramitar el envío a domicilio, realiza el pago de *30€ (IVA incluido)* "
-            "— envío + recogida al finalizar el alquiler — a través de este enlace, donde también completarás tus datos:\n\n"
-            "💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n\n"
-            "Una vez realizado el pago, envía el comprobante a soporte@kelatos.com y nos pondremos en contacto contigo para coordinar la entrega. 🚚"
+        envio_gratis = (
+            "domicilio" in (command.get("modalidad") or "").strip().lower()
+            and _rental_duration_is_7_plus_days(command.get("duracion", ""))
         )
+
+        if envio_gratis:
+            links = _rental_payment_links(command.get("tipo_equipo", ""))
+            payment_msg = (
+                "Para tramitar el envío a domicilio, realiza estos dos pagos:\n\n"
+                f"💳 Pago del alquiler: {links['rental']}\n"
+                f"💳 Pago de la fianza: {links['deposit']}\n\n"
+                "El envío está incluido, no se cobra aparte por alquilar 7 días o más. 🚚\n\n"
+                "Una vez realizados ambos pagos, envía los comprobantes a soporte@kelatos.com y nos pondremos en contacto contigo para coordinar la entrega."
+            )
+        else:
+            payment_msg = (
+                "Para tramitar el envío a domicilio, realiza el pago de *30€ (IVA incluido)* "
+                "— envío + recogida al finalizar el alquiler — a través de este enlace, donde también completarás tus datos:\n\n"
+                "💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n\n"
+                "Una vez realizado el pago, envía el comprobante a soporte@kelatos.com y nos pondremos en contacto contigo para coordinar la entrega. 🚚"
+            )
 
         if created_event:
             user_message = (

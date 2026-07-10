@@ -3,7 +3,12 @@ import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone, timedelta
 
-from calendar_service import CalendarService, MADRID_TZ
+from calendar_service import (
+    CalendarService,
+    MADRID_TZ,
+    _rental_duration_is_7_plus_days,
+    _rental_payment_links,
+)
 
 
 class TestGetAppointmentContext:
@@ -87,3 +92,25 @@ class TestCreateEvent:
         start = datetime.fromisoformat(body["start"]["dateTime"])
         end = datetime.fromisoformat(body["end"]["dateTime"])
         assert (end - start).total_seconds() == 1800  # 30 minutes
+
+
+class TestRentalFreeShippingLogic:
+    @pytest.mark.parametrize("duracion", ["7 días", "8 días", "1 semana", "2 semanas", "1 mes"])
+    def test_7_days_or_more_is_free(self, duracion):
+        assert _rental_duration_is_7_plus_days(duracion) is True
+
+    @pytest.mark.parametrize("duracion", ["1 día", "3 días", "6 días"])
+    def test_less_than_7_days_is_not_free(self, duracion):
+        assert _rental_duration_is_7_plus_days(duracion) is False
+
+    @pytest.mark.parametrize("tipo_equipo", ["Windows", "Mac", "Windows - HP 15-bc"])
+    def test_normal_laptops_use_caso_1_links(self, tipo_equipo):
+        links = _rental_payment_links(tipo_equipo)
+        assert links["rental"] == "https://sis.redsys.es/tiendaWeb/item/NDk4OzU="
+        assert links["deposit"] == "https://sis.redsys.es/tiendaWeb/item/NDk4OzY="
+
+    @pytest.mark.parametrize("tipo_equipo", ["Gaming", "Surface", "Gaming - Asus ROG Strix"])
+    def test_gaming_and_surface_use_caso_2_links(self, tipo_equipo):
+        links = _rental_payment_links(tipo_equipo)
+        assert links["rental"] == "https://sis.redsys.es/tiendaWeb/item/NDk4Ozc="
+        assert links["deposit"] == "https://sis.redsys.es/tiendaWeb/item/NDk4Ozg="

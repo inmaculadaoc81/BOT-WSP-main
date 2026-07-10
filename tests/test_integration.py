@@ -396,6 +396,29 @@ class TestWhatsAppWebhookFlow:
         assert "30€" in wa_text
         assert "CONFIRMAR_ENVIO" not in wa_text
 
+    async def test_alquiler_7_dias_envia_enlaces_de_alquiler_y_fianza(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
+        """AI responds with CONFIRMAR_ALQUILER for 8 dias → envio gratis, enlaces CASO 1 (Windows), sin cobrar 30€."""
+        from intent_classifier import IntentResult
+        mock_intent.return_value = IntentResult(wants_appointment=True)
+        mock_openai_generate.generate_response.return_value = (
+            "Alquiler confirmado.\n"
+            "CONFIRMAR_ALQUILER|2026-05-10T00:00:00+02:00|Pendiente|Windows - HP 15-bc|8 días|domicilio|Pendiente - datos en enlace de pago"
+        )
+
+        resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "quiero alquilar"))
+
+        assert resp.status_code == 200
+
+        call_kwargs = _mock_external_services["calendar"].create_event.call_args.kwargs
+        assert "Windows - HP 15-bc" in call_kwargs["title"]
+
+        wa_text = _mock_external_services["whatsapp"].send_message.call_args.kwargs["text"]
+        assert "Windows - HP 15-bc" in wa_text
+        assert "https://sis.redsys.es/tiendaWeb/item/NDk4OzU=" in wa_text
+        assert "https://sis.redsys.es/tiendaWeb/item/NDk4OzY=" in wa_text
+        assert "30€" not in wa_text
+        assert "CONFIRMAR_ALQUILER" not in wa_text
+
     async def test_calendar_failure_appends_error(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
         """If calendar event creation fails, user gets a graceful fallback message."""
         from intent_classifier import IntentResult
