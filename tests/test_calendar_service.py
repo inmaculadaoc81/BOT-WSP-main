@@ -35,9 +35,9 @@ class TestGetAppointmentContext:
         assert "PROTOCOLO DE CITA (cliente viene al local)" in result
         assert "PROTOCOLO DE ENVIO (mensajero recoge a domicilio)" in result
 
-    def test_contains_address_requirement_for_envio(self):
+    def test_envio_does_not_request_personal_data(self):
         result = self.svc.get_appointment_context()
-        assert "direccion completa" in result
+        assert "NO requiere recopilar ningun dato del cliente por el chat" in result
 
     def test_contains_current_date(self):
         result = self.svc.get_appointment_context()

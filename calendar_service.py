@@ -309,35 +309,27 @@ class CalendarService:
             f"   ---\n"
             f"8. NUNCA omitir la linea CONFIRMAR_CITA al confirmar. Sin esa linea, la cita NO se registra en el sistema.\n"
             f"\nPROTOCOLO DE ENVIO (mensajero recoge a domicilio):\n"
-            f"1. Datos necesarios: nombre completo + DNI/NIE/CIF + correo electronico + numero de telefono + motivo (equipo + problema) + direccion completa (calle, numero, CP, ciudad).\n"
-            f"2. Si falta alguno, pidelo antes de continuar. El DNI/NIE/CIF es obligatorio: Correos lo exige para tramitar la recogida.\n"
-            f"3. La recogida esta disponible para cualquier equipo que Kelatos atiende. Si hacemos diagnostico de ese equipo, hay recogida. No hay restriccion adicional por tipo.\n"
-            f"4. Informar del coste: 15€ por equipo. IMPORTANTE: el cliente debe abonar los 15€ ANTES de que se tramite la recogida con Correos, y enviar el justificante de pago por WhatsApp o correo. Este paso puede demorar el proceso.\n"
-            f"5. ⚠️ AVISO CORREOS: Actualmente Correos NO permite elegir dia de recogida. Se solicita pero NO se puede confirmar cuándo pasará el mensajero. NO pidas dia preferido. NO prometas ni confirmes fechas ni horas de recogida al cliente.\n"
-            f"6. Cuando tengas TODOS los datos, muestra un RESUMEN para que el cliente confirme:\n"
-            f"   '📋 *Resumen de tu solicitud de recogida:*\n"
-            f"   👤 Nombre: [nombre]\n"
-            f"   🪪 DNI/NIE/CIF: [dni_nie_cif]\n"
-            f"   📧 Email: [correo electronico]\n"
-            f"   🔧 Motivo: [equipo + problema]\n"
-            f"   📍 Direccion: [direccion completa]\n"
-            f"   💰 Coste: 15€ recogida + 15€ envio de vuelta (abono previo requerido antes de tramitar)\n"
-            f"   _Correos no permite elegir fecha ni hora concreta de recogida. La fecha la asigna Correos una vez tramitada._\n"
-            f"   ¿Es correcto?'\n"
-            f"7. CUANDO EL CLIENTE CONFIRMA (dice si, correcto, ok, perfecto, dale, vale, etc.) tu respuesta DEBE contener SIEMPRE DOS PARTES (las dos, no una o la otra):\n"
-            f"   PARTE A (texto visible al cliente): '✅ ¡Solicitud registrada! Para tramitar la recogida con Correos es necesario realizar el pago de *30€ (IVA incluido)* — recogida + envío de vuelta — a través del siguiente enlace:\n"
+            f"⚠️ Este flujo NO requiere recopilar ningun dato del cliente por el chat. NUNCA pidas nombre, DNI/NIE/CIF, correo, telefono ni direccion. El cliente completa todos esos datos directamente en el enlace de pago.\n"
+            f"1. La recogida esta disponible para cualquier equipo que Kelatos atiende. Si hacemos diagnostico de ese equipo, hay recogida. No hay restriccion adicional por tipo.\n"
+            f"2. Informar del coste: *30€ (IVA incluido)* — recogida + envio de vuelta.\n"
+            f"3. ⚠️ AVISO CORREOS: Actualmente Correos NO permite elegir dia de recogida. NO pidas dia preferido. NO prometas ni confirmes fechas ni horas de recogida al cliente.\n"
+            f"4. EN CUANTO el cliente confirme que quiere la recogida (sin pedirle ningun dato antes), tu respuesta DEBE contener SIEMPRE DOS PARTES (las dos, no una o la otra):\n"
+            f"   PARTE A (texto visible al cliente): 'Para tramitar la recogida, realiza el pago de *30€ (IVA incluido)* — este precio incluye la recogida en tu domicilio y el envío de vuelta una vez reparado — a través de este enlace, donde también completarás tus datos:\n"
             f"   💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n"
-            f"   En cuanto confirmemos el pago, solicitamos la recogida a Correos. 🚚'\n"
-            f"   PARTE B (linea de comando interna, en una linea aparte al final, el cliente NO la ve): CONFIRMAR_ENVIO|<datetime_iso>|<nombre_cliente>|<motivo>|<direccion>|<dni_nie_cif>|<email>\n"
-            f"   EJEMPLO completo de respuesta valida cuando el cliente dice 'si':\n"
+            f"   Una vez realizado el pago, envía el comprobante a soporte@kelatos.com y gestionamos la recogida con Correos. 🚚\n"
+            f"   Recuerda embalar bien el equipo para protegerlo durante el transporte.'\n"
+            f"   PARTE B (linea de comando interna, en una linea aparte al final, el cliente NO la ve): CONFIRMAR_ENVIO|<datetime_iso_actual>|Pendiente|<motivo>\n"
+            f"   EJEMPLO completo de respuesta valida cuando el cliente confirma que quiere la recogida:\n"
             f"   ---\n"
-            f"   ✅ ¡Solicitud registrada! Para tramitar la recogida con Correos es necesario realizar el pago de *30€ (IVA incluido)* — recogida + envío de vuelta — a través del siguiente enlace:\n"
+            f"   Para tramitar la recogida, realiza el pago de *30€ (IVA incluido)* — este precio incluye la recogida en tu domicilio y el envío de vuelta una vez reparado — a través de este enlace, donde también completarás tus datos:\n"
             f"   💳 https://sis.redsys.es/tiendaWeb/item/NDk4OzI=\n"
-            f"   En cuanto confirmemos el pago, solicitamos la recogida a Correos. 🚚\n"
+            f"   Una vez realizado el pago, envía el comprobante a soporte@kelatos.com y gestionamos la recogida con Correos. 🚚\n"
+            f"   Recuerda embalar bien el equipo para protegerlo durante el transporte.\n"
             f"\n"
-            f"   CONFIRMAR_ENVIO|2026-04-22T10:00:00+02:00|Carlo Gabriel|Dyson SV10 ruidos|Calle Blasco de Garay 61, 28015 Madrid|12345678A|carlo@email.com\n"
+            f"   CONFIRMAR_ENVIO|2026-04-22T10:00:00+02:00|Pendiente|Dyson SV10 ruidos\n"
             f"   ---\n"
-            f"8. NUNCA omitir la linea CONFIRMAR_ENVIO al confirmar. Sin esa linea, la recogida NO se registra en el sistema.\n"
+            f"5. NUNCA omitir la linea CONFIRMAR_ENVIO al confirmar. Sin esa linea, la recogida NO se registra en el sistema.\n"
+            f"6. ❌ NUNCA muestres un resumen pidiendo nombre, DNI, email o direccion antes de enviar el enlace de pago. El unico dato que necesitas ya lo tienes: el equipo/motivo de la reparacion.\n"
             f"\nIMPORTANTE:\n"
             f"- NUNCA generes CONFIRMAR_CITA ni CONFIRMAR_ENVIO sin mostrar primero el resumen y recibir confirmacion explicita del cliente.\n"
             f"- Si el cliente dice que algun dato es incorrecto, corrigelo y muestra el resumen de nuevo.\n"
@@ -382,8 +374,11 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
             }
 
         if line.startswith("CONFIRMAR_ENVIO|"):
+            # Formato minimo (actual): datetime|nombre(o "Pendiente")|motivo
+            # Se aceptan campos extra (direccion/dni/email) por compatibilidad, pero no son obligatorios:
+            # el cliente los completa directamente en el enlace de pago, no por el chat.
             parts = line.split("|", 6)
-            if len(parts) not in (5, 6, 7):
+            if len(parts) not in (4, 5, 6, 7):
                 logger.warning("Formato inválido en CONFIRMAR_ENVIO", extra={"line": line})
                 return None
 
@@ -392,7 +387,7 @@ def extract_confirmation_command(ai_response: str) -> dict | None:
                 "datetime_iso": parts[1].strip(),
                 "customer_name": parts[2].strip(),
                 "reason": parts[3].strip(),
-                "address": parts[4].strip(),
+                "address": parts[4].strip() if len(parts) >= 5 else "",
                 "dni_nie_cif": parts[5].strip() if len(parts) >= 6 else "",
                 "email": parts[6].strip() if len(parts) == 7 else "",
                 "raw_line": line,
@@ -498,27 +493,29 @@ def _validate_appointment(
     cmd_type = command.get("type", "")
 
     # Nombre: el LLM lo emite en la linea CONFIRMAR; comprobamos que sea real.
-    # Para alquiler a domicilio el cliente completa datos en el enlace de pago, se acepta "Pendiente".
+    # Para alquiler a domicilio y para recogida (envio) el cliente completa sus datos
+    # directamente en el enlace de pago, no por el chat, asi que se acepta "Pendiente".
     customer_name = command.get("customer_name", "")
     es_alquiler_domicilio = (
         cmd_type == "alquiler"
         and "domicilio" in (command.get("modalidad") or "").strip().lower()
     )
-    if not es_alquiler_domicilio and not _is_real_name(customer_name):
+    es_envio_domicilio = cmd_type == "envio"
+    if not es_alquiler_domicilio and not es_envio_domicilio and not _is_real_name(customer_name):
         missing.append("nombre completo del cliente")
 
-    # Motivo: solo para cita y envio (no para alquiler en tienda).
+    # Motivo: solo para cita y envio (no para alquiler en tienda). Para envio, el motivo
+    # ya se conoce por la conversacion previa sobre el equipo, no se pide como dato nuevo.
     if cmd_type in ("cita", "envio"):
         reason = (command.get("reason") or "").strip()
         if not reason or len(reason) < 3:
             missing.append("motivo (equipo + problema)")
 
-    # Para alquiler (tienda o domicilio): no se piden datos por chat.
-    # Para alquiler a domicilio el cliente completa sus datos en el enlace de pago.
-    modalidad_alquiler = (command.get("modalidad") or "").strip().lower()
+    # Para alquiler (tienda o domicilio) y para recogida (envio): no se piden datos por chat.
+    # El cliente completa sus datos (nombre, direccion, DNI, email) directamente en el enlace de pago.
     es_alquiler = cmd_type == "alquiler"
 
-    if not es_alquiler:
+    if not es_alquiler and not es_envio_domicilio:
         # Email: tiene que estar en algun mensaje del cliente.
         if not _EMAIL_RE.search(history_text):
             missing.append("correo electronico")
@@ -554,17 +551,13 @@ def _validate_appointment(
         except (ValueError, KeyError, TypeError):
             missing.append("fecha y hora valida")
 
-    # Direccion: obligatoria para envios, devoluciones y alquiler a domicilio.
-    if command.get("type") in ("envio", "devolucion"):
+    # Direccion: obligatoria para devoluciones (envio de vuelta al cliente tras reparar,
+    # no tiene enlace de pago con formulario). Para recogida (envio) NO se pide: el cliente
+    # completa la direccion directamente en el enlace de pago.
+    if command.get("type") == "devolucion":
         address = (command.get("address") or "").strip()
         if not address or len(address.split()) < 3 or not any(c.isdigit() for c in address):
             missing.append("direccion completa (calle, numero, codigo postal y ciudad)")
-
-    # DNI/NIE/CIF: obligatorio para envios (lo exige Correos).
-    if command.get("type") == "envio":
-        dni = (command.get("dni_nie_cif") or "").strip()
-        if not dni or len(dni) < 7:
-            missing.append("DNI, NIE o CIF del remitente (lo exige Correos para tramitar la recogida)")
 
     if command.get("type") == "alquiler":
         if not (command.get("tipo_equipo") or "").strip():
@@ -691,13 +684,16 @@ async def process_ai_calendar_command(
             )
 
     elif command["type"] == "envio":
+        # El cliente completa nombre, direccion, DNI y email en el enlace de pago,
+        # no por el chat, asi que esos campos suelen venir vacios ("Pendiente"/"").
+        address_info = f"\nDirección: {command['address']}" if command.get("address") else ""
         dni_info = f"\nDNI/NIE/CIF: {command['dni_nie_cif']}" if command.get("dni_nie_cif") else ""
         email_info = f"\nEmail: {command['email']}" if command.get("email") else ""
         created_event = await calendar_service.create_event(
             title=f"RECOGIDA: {command['customer_name']}",
             start_iso=command["datetime_iso"],
             duration_minutes=30,
-            description=f"{command['reason']}\nDirección: {command['address']}{dni_info}{email_info}",
+            description=f"{command['reason']}{address_info}{dni_info}{email_info}",
             attendee_phone=attendee_phone,
         )
 

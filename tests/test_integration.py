@@ -375,14 +375,13 @@ class TestWhatsAppWebhookFlow:
         assert "CONFIRMAR_CITA" not in wa_text
         assert "Tu cita ha sido registrada" in wa_text
 
-    async def test_envio_creates_calendar_event_with_address(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
-        """AI responds with CONFIRMAR_ENVIO → calendar event with address, payment link sent to client."""
+    async def test_envio_creates_calendar_event_without_asking_for_data(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
+        """AI responds with CONFIRMAR_ENVIO (no personal data collected in chat) → calendar event created, payment link sent to client."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(wants_appointment=True)
-        await _isolated_db.save_message("34600111222", "user", "mi correo es maria@example.com")
         mock_openai_generate.generate_response.return_value = (
             "Recogida confirmada.\n"
-            "CONFIRMAR_ENVIO|2026-04-01T10:00:00+02:00|Maria Lopez|Dyson V15|Calle Gran Via 10, Madrid|12345678A"
+            "CONFIRMAR_ENVIO|2026-04-01T10:00:00+02:00|Pendiente|Dyson V15"
         )
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "quiero envio"))
@@ -390,9 +389,8 @@ class TestWhatsAppWebhookFlow:
         assert resp.status_code == 200
 
         call_kwargs = _mock_external_services["calendar"].create_event.call_args.kwargs
-        assert call_kwargs["title"] == "RECOGIDA: Maria Lopez"
-        assert "Dirección: Calle Gran Via 10, Madrid" in call_kwargs["description"]
-        assert "DNI/NIE/CIF: 12345678A" in call_kwargs["description"]
+        assert call_kwargs["title"] == "RECOGIDA: Pendiente"
+        assert "Dyson V15" in call_kwargs["description"]
 
         wa_text = _mock_external_services["whatsapp"].send_message.call_args.kwargs["text"]
         assert "30€" in wa_text
