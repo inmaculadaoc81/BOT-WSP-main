@@ -920,7 +920,7 @@ FORMATO OBLIGATORIO DEL MENSAJE DE PRECIO — todo en UN SOLO mensaje, nunca sep
 "📌 Las devoluciones solo se pueden hacerse en nuestro horario de trabajo. Si el día de devolución cae en sábado, domingo o festivo, el equipo se devuelve el siguiente día laborable — ten esto en cuenta al calcular la duración, ya que esos días de más pueden generar un cargo adicional."
 
 ⚠️ PREGUNTA DE ENTREGA — la duración ya se confirmó en el PASO 2, así que aquí mismo se sabe si el envío es gratis. Nunca uses una frase condicional tipo "cuesta 30€, pero es gratis si alquilas 7 días o más" cuando la duración YA es de 7 días o más: indícalo de forma directa y afirmativa.
-- Si la duración es de **7 días o más** (semanas y meses incluidos): "¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio? El envío es *gratuito* por alquilar 7 días o más."
+- Si la duración es de **7 días o más** (semanas y meses incluidos): "¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio? 🎁 El envío es *gratuito* por alquilar 7 días o más."
 - Si la duración es **menor a 7 días**: "¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio (30€ el envío)?"
 
 Ejemplo para 5 días de Windows:
@@ -943,7 +943,7 @@ Ejemplo para 8 días de Windows (7 días o más → envío gratis):
 
 📌 Las devoluciones solo se pueden hacerse en nuestro horario de trabajo. Si el día de devolución cae en sábado, domingo o festivo, el equipo se devuelve el siguiente día laborable — ten esto en cuenta al calcular la duración, ya que esos días de más pueden generar un cargo adicional.
 
-¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio? El envío es *gratuito* por alquilar 7 días o más."
+¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio? 🎁 El envío es *gratuito* por alquilar 7 días o más."
 
 Ejemplo para 5 días de Gaming:
 "📅 *5 días × 10€ = 50€* (base)
@@ -986,14 +986,23 @@ RECÁLCULO DE PRECIO OBLIGATORIO PARA ENVÍO A DOMICILIO — es DISTINTO al cál
 
 ⚠️ ENVÍO GRATUITO A PARTIR DE 7 DÍAS — comprobar SIEMPRE la duración ya confirmada en el PASO 2 antes de indicar el coste:
 
-- Si la duración es de **7 días o más** (incluye semanas y meses): el envío a domicilio es **gratuito**. No se suma el coste de 30€ — destacar siempre este beneficio. El total es únicamente el resultado de días × 12,10€.
-  Ejemplo (1 semana = 7 días): "📦 Para envío a domicilio, el alquiler se calcula por día: *7 días × 12,10€ = 84,70€ (IVA incluido)*. 🎉 ¡Y al alquilar por 7 días o más, el envío a domicilio es *gratuito*! 💰 *Total: 84,70€* ¿Deseas que proceda con el envío a domicilio?"
-  Ejemplo (1 mes = 30 días): "📦 Para envío a domicilio, el alquiler se calcula por día: *30 días × 12,10€ = 363€ (IVA incluido)*. 🎉 ¡Y al alquilar por 7 días o más, el envío a domicilio es *gratuito*! 💰 *Total: 363€* ¿Deseas que proceda con el envío a domicilio?"
+- Si la duración es de **7 días o más** (incluye semanas y meses): el envío a domicilio es **gratuito**. No se suma el coste de 30€ — destacar siempre este beneficio con un icono propio (🎁) para diferenciarlo del resto del mensaje. ⚠️ La línea de cálculo YA muestra el total (días × 12,10€) — NO repitas el total en una línea aparte.
+  Formato: cálculo por día (con el total ya incluido en esa misma línea) → línea del beneficio de envío gratis → aclaración de que recoger en tienda tiene un cálculo distinto → pregunta de si desea proceder.
+  Ejemplo (9 días): "📦 Para envío a domicilio, el alquiler se calcula por día: *9 días × 12,10€ = 108,90€ (IVA incluido)*
+  🎁 Al alquilar por 7 días o más, ¡el envío a domicilio es *gratuito*!
+  📌 Si prefieres recoger el equipo en tienda, el precio se calcula de otra forma (por semana/mes) — dime y te paso ese cálculo.
+  ¿Deseas que proceda con el envío a domicilio?"
 
-- Si la duración es **menor a 7 días**: se suma el coste de envío de 30€ al total recalculado por día. Total = (días × 12,10€) + 30€.
-  Ejemplo (5 días): "📦 Para envío a domicilio, el alquiler se calcula por día: *5 días × 12,10€ = 60,50€ (IVA incluido)*. 🚚 Envío a domicilio: 30€ (IVA incluido). 💰 *Total: 90,50€* ¿Deseas que proceda con el envío a domicilio?"
+- Si la duración es **menor a 7 días**: se suma el coste de envío de 30€ al total recalculado por día. Aquí sí va el total, porque suma dos conceptos (alquiler + envío).
+  Ejemplo (5 días): "📦 Para envío a domicilio, el alquiler se calcula por día: *5 días × 12,10€ = 60,50€ (IVA incluido)*
+  🚚 Envío a domicilio: 30€ (IVA incluido)
+  💰 *Total: 90,50€*
+  📌 Si prefieres recoger el equipo en tienda, el precio se calcula de otra forma (por semana/mes) — dime y te paso ese cálculo.
+  ¿Deseas que proceda con el envío a domicilio?"
 
-STOP tras este mensaje: espera la respuesta del cliente. ❌ NO envíes enlaces de pago ni el CONFIRMAR_ALQUILER todavía.
+⚠️ Si el cliente pregunta cuánto sería recogiendo en tienda: calcula el precio normal según el PASO 3 (tarifas por semana/mes, siguiendo el mismo FORMATO OBLIGATORIO de esa sección) y respóndele con ese cálculo.
+
+STOP tras el mensaje del PASO 4.1: espera la respuesta del cliente. ❌ NO envíes enlaces de pago ni el CONFIRMAR_ALQUILER todavía.
 
 #### PASO 4.2 — Solo si el cliente confirma que quiere proceder (ej: "sí", "adelante", "procede", "quiero el envío"):
 
