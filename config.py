@@ -919,9 +919,8 @@ FORMATO OBLIGATORIO DEL MENSAJE DE PRECIO — todo en UN SOLO mensaje, nunca sep
 ⚠️ AVISO DE DEVOLUCIÓN — incluir SIEMPRE, palabras exactas (puede adaptarse levemente el tono pero no el contenido):
 "📌 Las devoluciones solo se pueden hacerse en nuestro horario de trabajo. Si el día de devolución cae en sábado, domingo o festivo, el equipo se devuelve el siguiente día laborable — ten esto en cuenta al calcular la duración, ya que esos días de más pueden generar un cargo adicional."
 
-⚠️ PREGUNTA DE ENTREGA — la duración ya se confirmó en el PASO 2, así que aquí mismo se sabe si el envío es gratis. Nunca uses una frase condicional tipo "cuesta 30€, pero es gratis si alquilas 7 días o más" cuando la duración YA es de 7 días o más: indícalo de forma directa y afirmativa.
-- Si la duración es de **7 días o más** (semanas y meses incluidos): "¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio? 🎁 El envío es *gratuito* por alquilar 7 días o más."
-- Si la duración es **menor a 7 días**: "¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio (30€ el envío)?"
+⚠️ PREGUNTA DE ENTREGA — en este punto (PASO 3) NO menciones si el envío es gratis ni su coste: esa información se da únicamente en el PASO 4.1, dentro del nuevo cálculo de precio de envío. Aquí la pregunta es siempre neutra, sin adelantar coste ni beneficio:
+- "¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio?"
 
 Ejemplo para 5 días de Windows:
 "📅 *5 días × 10€ = 50€* (base)
@@ -932,7 +931,7 @@ Ejemplo para 5 días de Windows:
 
 📌 Las devoluciones solo se pueden hacerse en nuestro horario de trabajo. Si el día de devolución cae en sábado, domingo o festivo, el equipo se devuelve el siguiente día laborable — ten esto en cuenta al calcular la duración, ya que esos días de más pueden generar un cargo adicional.
 
-¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio (30€ el envío)?"
+¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio?"
 
 Ejemplo para 8 días de Windows (7 días o más → envío gratis):
 "📅 *1 semana × 50€ + 1 día × 10€ = 60€* (base)
@@ -943,7 +942,7 @@ Ejemplo para 8 días de Windows (7 días o más → envío gratis):
 
 📌 Las devoluciones solo se pueden hacerse en nuestro horario de trabajo. Si el día de devolución cae en sábado, domingo o festivo, el equipo se devuelve el siguiente día laborable — ten esto en cuenta al calcular la duración, ya que esos días de más pueden generar un cargo adicional.
 
-¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio? 🎁 El envío es *gratuito* por alquilar 7 días o más."
+¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio?"
 
 Ejemplo para 5 días de Gaming:
 "📅 *5 días × 10€ = 50€* (base)
@@ -954,7 +953,7 @@ Ejemplo para 5 días de Gaming:
 
 📌 Las devoluciones solo se pueden hacerse en nuestro horario de trabajo. Si el día de devolución cae en sábado, domingo o festivo, el equipo se devuelve el siguiente día laborable — ten esto en cuenta al calcular la duración, ya que esos días de más pueden generar un cargo adicional.
 
-¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio (30€ el envío)?"
+¿Prefieres recoger el equipo en tienda o que te lo enviemos a domicilio?"
 
 ---
 
