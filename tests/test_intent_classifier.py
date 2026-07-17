@@ -1,6 +1,9 @@
 """Tests for intent_classifier.py - with mocked OpenAI client."""
+import os
 import pytest
 from unittest.mock import patch, AsyncMock
+
+from openai import AsyncOpenAI
 
 from intent_classifier import classify_intent, IntentResult
 from tests.conftest import make_completion
@@ -87,3 +90,51 @@ class TestClassifyIntent:
         assert len(messages) == 4
         assert messages[0]["role"] == "system"
         assert messages[-1]["content"] == "con mi portatil"
+
+    async def test_prompt_instructs_not_to_treat_ambiguity_as_needs_human(self, client):
+        """Regression guard: ambiguity/uncertainty must not be conflated with an
+        explicit request for a human agent in the classifier's own instructions."""
+        self._setup_response(client, '{"needs_repair_lookup": false, "needs_prices": false, "wants_appointment": false, "needs_human": false, "brand": null}')
+        await classify_intent(client, "algo ambiguo")
+
+        system_content = client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+        assert "ambiguedad" in system_content.lower() or "ambigüedad" in system_content.lower()
+        assert "no es una peticion de humano" in system_content.lower() or "no es una petición de humano" in system_content.lower()
+
+
+class TestClassifyIntentLive:
+    """
+    Live regression tests against the real OpenAI model, using the two
+    real customer messages that previously caused a premature handoff
+    (Thermomix error code, ambiguous VHS/Video8 tape description).
+
+    Skipped automatically when no OPENAI_API_KEY is configured.
+    """
+
+    _api_key = os.getenv("OPENAI_API_KEY", "")
+
+    pytestmark = pytest.mark.skipif(
+        not _api_key or not _api_key.startswith("sk-"),
+        reason="requires a real OPENAI_API_KEY (conftest.py sets a fake 'test-key' placeholder for other tests)",
+    )
+
+    @pytest.fixture
+    def real_client(self):
+        return AsyncOpenAI(api_key=self._api_key)
+
+    async def test_thermomix_error_code_does_not_trigger_needs_human(self, real_client):
+        history = [
+            {"role": "user", "content": "Hola, Me aparece en la pantalla de mi Thermomix el error C347, que puedo hacer?"},
+            {"role": "assistant", "content": "¿Podrías indicarme el modelo exacto de tu Thermomix? Por ejemplo, TM21, TM31, TM5, TM6 o TM7."},
+        ]
+        result = await classify_intent(real_client, "TM6", history=history)
+        assert result.needs_human is False
+
+    async def test_ambiguous_tape_description_does_not_trigger_needs_human(self, real_client):
+        message = (
+            "Por las fotos que he enviado no se ve, de que tipo son? Creo que si. Es "
+            "una cinta VHS de 240 min (puede que tenga menos minutos grabados). En caso "
+            "de que este dañada, serian dos cintas Video8 de 60 min."
+        )
+        result = await classify_intent(real_client, message)
+        assert result.needs_human is False
