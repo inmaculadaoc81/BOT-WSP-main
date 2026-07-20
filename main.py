@@ -360,8 +360,10 @@ async def receive_message(request: Request):
                 await whatsapp_svc.send_message(to=sender, text=full_msg)
                 await _handle_handoff(sender)
             else:
-                # Outside hours: discard "te transfiero" text, ask for contact instead
-                full_msg = get_outside_hours_message()
+                # Outside hours: keep whatever the model already answered, append closing note
+                clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
+                closing = get_outside_hours_message()
+                full_msg = f"{clean_response}\n\n{closing}" if clean_response else closing
                 await db.save_message(sender, "assistant", full_msg)
                 await whatsapp_svc.send_message(to=sender, text=full_msg)
             return {"status": "handoff"}
@@ -945,8 +947,10 @@ async def chatwoot_webhook(request: Request):
                 await chatwoot_svc.send_message(conversation_id, full_msg)
                 await _handle_handoff(sender_key, conversation_id=conversation_id)
             else:
-                # Outside hours: discard "te transfiero" text, ask for contact instead
-                full_msg = get_outside_hours_message()
+                # Outside hours: keep whatever the model already answered, append closing note
+                clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
+                closing = get_outside_hours_message()
+                full_msg = f"{clean_response}\n\n{closing}" if clean_response else closing
                 await db.save_message(history_key, "assistant", full_msg)
                 await chatwoot_svc.send_message(conversation_id, full_msg)
             return {"status": "handoff"}
