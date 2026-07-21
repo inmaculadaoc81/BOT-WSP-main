@@ -138,3 +138,20 @@ class TestClassifyIntentLive:
         )
         result = await classify_intent(real_client, message)
         assert result.needs_human is False
+
+    async def test_thermomix_dislodged_blades_does_not_trigger_needs_human(self, real_client):
+        message = (
+            "Tengo una Thermomix tm31 y dos vasos, no me funciona. Se han "
+            "desbasculado las cuchillas"
+        )
+        result = await classify_intent(real_client, message)
+        assert result.needs_human is False
+
+    async def test_macbook_reinstall_error_does_not_trigger_needs_human(self, real_client):
+        message = (
+            "Hola Fatima Quisiera reinstalar macOS a mi MacBook Pro 2010. Borre el "
+            "disco y no tenia copia. Quisiera instalarlo nuevamente. No me deja "
+            "hacerlo manualmente porque me sale error"
+        )
+        result = await classify_intent(real_client, message)
+        assert result.needs_human is False
