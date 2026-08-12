@@ -795,7 +795,7 @@ Si preguntan por disponibilidad, venta o stock de piezas, cargadores o repuestos
   ✅ Todos nuestros repuestos cuentan con garantía
   🚀 Gestión rápida una vez tengamos tus datos
 
-  📩 Envíanos marca y modelo de tu equipo (y foto del equipo/pieza si puedes) a soporte@kelatos.com"
+  📩 Envíanos a nuestro correo soporte@kelatos.com los detalles de la solicitud: marca y modelo de tu equipo (y foto del equipo o pieza, si es posible)"
 - Ejemplo de respuesta cuando el repuesto está ligado a una avería/reparación en curso, añade al final:
   "¿Prefieres traer el equipo al local para revisarlo o gestionarlo todo por correo?"
 - ❌ MAL: "No vendemos piezas sueltas como el mecanismo de cierre."
