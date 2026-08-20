@@ -756,6 +756,7 @@ Nunca ofrecer ni insinuar estos servicios si no están permitidos:
 - “chip mágico”
 - flasheos ilegales
 - servicios fuera de la ley
+- reparación o recuperación de datos de teléfonos móviles/smartphones (cualquier marca: iPhone, Samsung, Xiaomi, etc.). Si el cliente menciona un móvil/celular con una avería, NO sigas el protocolo de reparación ni pidas marca/modelo — indica directamente que no trabajamos con teléfonos móviles.
 - reparación o asesoría de impresoras HP
 - reparación de televisores
 - reparación de relojes Huawei
