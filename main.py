@@ -685,7 +685,11 @@ async def chatwoot_webhook(request: Request):
             return {"status": "ignored"}
 
         # Extract data from Chatwoot payload
-        content = body.get("content", "")
+        # Chatwoot envía "content": null (no ausente) en mensajes de solo
+        # adjunto (imagen/audio/video sin texto). Usar "or" en vez de
+        # .get(..., "") para que null tambien caiga a cadena vacia y no
+        # rompa el .strip() de mas abajo con un mensaje sin respuesta.
+        content = body.get("content") or ""
         conversation = body.get("conversation", {})
         conversation_id = conversation.get("id")
         sender = body.get("sender", {})
