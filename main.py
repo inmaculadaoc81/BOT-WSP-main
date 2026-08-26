@@ -1,6 +1,7 @@
 import logging
 import json
 import re
+import time
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Request, Response, HTTPException, Query
@@ -103,6 +104,53 @@ SURVEY_RESPONSES = {
     "muy malo",
 }
 
+# ── Webhook idempotency & aviso de adjuntos (en memoria; despliegue de un solo proceso) ──
+#
+# Meta y Chatwoot reintentan la entrega del webhook si la respuesta tarda
+# (la generación de la respuesta con IA puede tardar varios segundos). Sin
+# protección, cada reintento se procesaba como un mensaje nuevo: se volvía a
+# clasificar la intención y a generar una respuesta con IA distinta cada vez,
+# de ahí que el cliente recibiera varias contestaciones distintas para el
+# mismo mensaje ("¡Claro! ¿modelo de tu Mac...?" repetido con variaciones).
+_SEEN_EVENTS_TTL = 600  # segundos que se recuerda un id de evento ya procesado
+_seen_events: dict[str, float] = {}
+
+# Cuando el cliente envía varias imágenes seguidas, cada una llega como un
+# evento de webhook independiente. Sin control, el bot respondía "solo puedo
+# leer mensajes de texto" una vez por cada imagen. Este cooldown limita ese
+# aviso a como mucho uno por conversación cada N segundos.
+_ATTACHMENT_NOTICE_COOLDOWN = 20
+_last_attachment_notice: dict[str, float] = {}
+
+
+def _is_duplicate_event(event_key: str) -> bool:
+    """True si event_key ya se proceso recientemente (reintento de webhook).
+
+    Marca el evento como visto como efecto secundario. Purga entradas viejas
+    para que el diccionario no crezca sin límite (estado en memoria, se
+    reinicia si el proceso se reinicia).
+    """
+    now = time.monotonic()
+    stale = [k for k, ts in _seen_events.items() if now - ts > _SEEN_EVENTS_TTL]
+    for k in stale:
+        del _seen_events[k]
+    if event_key in _seen_events:
+        return True
+    _seen_events[event_key] = now
+    return False
+
+
+def _should_send_attachment_notice(key: str) -> bool:
+    """False si ya se envio el aviso de 'solo texto' a esta conversacion
+    dentro de la ventana de cooldown (evita repetirlo una vez por cada
+    imagen cuando el cliente envia varias seguidas)."""
+    now = time.monotonic()
+    last = _last_attachment_notice.get(key)
+    if last is not None and now - last < _ATTACHMENT_NOTICE_COOLDOWN:
+        return False
+    _last_attachment_notice[key] = now
+    return True
+
 
 def _is_budget_decision(text: str, history: list[dict]) -> bool:
     """True si el mensaje es una aceptación o rechazo de presupuesto."""
@@ -200,10 +248,21 @@ async def receive_message(request: Request):
         message = messages[0]
         sender = message.get("from")  # Phone number of sender
         msg_type = message.get("type")
+        message_id = message.get("id")
+
+        # Ignore webhook retries of a message already processed (Meta reenvia
+        # el evento si no recibe 200 a tiempo, p.ej. mientras la IA genera
+        # respuesta). wamid es unico por mensaje.
+        if message_id and _is_duplicate_event(f"wa:{message_id}"):
+            logger.info(f"Duplicate WhatsApp webhook delivery ignored (id={message_id})")
+            return {"status": "duplicate_ignored"}
 
         # Only handle text messages for now
         if msg_type != "text":
             logger.info(f"Ignoring non-text message type: {msg_type}")
+            if not _should_send_attachment_notice(sender):
+                logger.info(f"Attachment notice suppressed for {sender} (cooldown)")
+                return {"status": "non-text ignored (cooldown)"}
             if msg_type in ("image", "video"):
                 response_text = (
                     "¡Gracias por tu mensaje! 😊 Entiendo que quieres enviarnos fotos o videos, "
@@ -684,6 +743,15 @@ async def chatwoot_webhook(request: Request):
             logger.info(f"Ignoring Chatwoot event: {event}, type: {message_type}")
             return {"status": "ignored"}
 
+        # Ignore webhook retries of a message already processed (Chatwoot
+        # reenvia el evento si no recibe 200 a tiempo, p.ej. mientras la IA
+        # genera respuesta). El "id" de un evento message_created es el id
+        # del mensaje, unico por evento.
+        event_id = body.get("id")
+        if event_id is not None and _is_duplicate_event(f"cw:{event_id}"):
+            logger.info(f"Duplicate Chatwoot webhook delivery ignored (id={event_id})")
+            return {"status": "duplicate_ignored"}
+
         # Extract data from Chatwoot payload
         # Chatwoot envía "content": null (no ausente) en mensajes de solo
         # adjunto (imagen/audio/video sin texto). Usar "or" en vez de
@@ -761,20 +829,26 @@ async def chatwoot_webhook(request: Request):
                 logger.info(f"Received {file_type} attachment in conversation {conversation_id}")
             else:
                 logger.info(f"Empty content in conversation {conversation_id}")
-            await chatwoot_svc.send_message(
-                conversation_id,
-                "Por ahora solo puedo leer mensajes de texto. 😊 ¿Podrías describir tu consulta con palabras?",
-            )
+            if _should_send_attachment_notice(f"chatwoot_{conversation_id}"):
+                await chatwoot_svc.send_message(
+                    conversation_id,
+                    "Por ahora solo puedo leer mensajes de texto. 😊 ¿Podrías describir tu consulta con palabras?",
+                )
+            else:
+                logger.info(f"Attachment notice suppressed for conversation {conversation_id} (cooldown)")
             return {"status": "non-text ignored"}
 
         # Ignore non-text content_type
         content_type = body.get("content_type", "text")
         if content_type != "text":
             logger.info(f"Ignoring non-text content_type: {content_type}")
-            await chatwoot_svc.send_message(
-                conversation_id,
-                "Por ahora solo puedo leer mensajes de texto. 😊 ¿Podrías describir tu consulta con palabras?",
-            )
+            if _should_send_attachment_notice(f"chatwoot_{conversation_id}"):
+                await chatwoot_svc.send_message(
+                    conversation_id,
+                    "Por ahora solo puedo leer mensajes de texto. 😊 ¿Podrías describir tu consulta con palabras?",
+                )
+            else:
+                logger.info(f"Attachment notice suppressed for conversation {conversation_id} (cooldown)")
             return {"status": "non-text ignored"}
 
         # Get the customer's phone number for repair lookups
