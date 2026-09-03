@@ -8,6 +8,23 @@ from sheets_service import REPAIR_COLUMNS, _extract_repair, phones_match, normal
 logger = logging.getLogger(__name__)
 
 
+def _inferir_tipo_equipo(marca: str, modelo: str, caracteristicas: str) -> str:
+    """El Sheet 'Equipos' original tenia una columna tipo con valores como
+    'Gamer'/'Surface' que _categoria() (sheets_service.format_equipos_for_prompt)
+    usa para clasificar. La tabla kelatos_app.equipos no trajo ese dato con el
+    mismo significado (solo 'Portatil'/'Normal'), asi que se reconstruye aqui
+    a partir de marca/modelo/caracteristicas — _categoria() sigue intacta, solo
+    cambia lo que le llega en 'tipo'. Nunca debe devolver "" (una tipo vacia
+    hace que _categoria() devuelva "" y el equipo se descarte silenciosamente
+    en format_equipos_for_prompt)."""
+    texto = f"{marca} {modelo} {caracteristicas}".lower()
+    if "surface" in marca.lower():
+        return "Microsoft Surface"
+    if any(k in texto for k in ("gaming", "gamer", "rtx", "gtx", "radeon rx")):
+        return "Gamer"
+    return "Portátil"
+
+
 def _candidate_phones(phone: str) -> list[str]:
     """Reproduce la tolerancia de phones_match() (Sheets) contra un filtro de
     igualdad exacta (la API del dashboard no soporta LIKE) — genera varias
@@ -116,3 +133,36 @@ class KelatosApiService:
                     resultado.append(_extract_repair(row))
         logger.info(f"Found {len(resultado)} repairs by phone for {phone}")
         return resultado
+
+    async def get_available_equipos(self) -> list[dict]:
+        """Reproduce SheetsService.get_available_equipos() — antes leia la
+        pestana "Equipos" del Sheet de reparaciones (ya no existe / no es la
+        fuente real); ahora usa GET /v1/equipos, el mismo endpoint canonico
+        que ya usa el dashboard (kelatos-rep-back server.js) para el modulo
+        de Alquileres. Mismo filtro de disponibilidad que el original: activo,
+        estado=DISPONIBLE, sin defectos, sin observaciones. Devuelve la misma
+        forma de dict (marca/modelo/tipo/sistema_operativo/caracteristicas)
+        que espera format_equipos_for_prompt() (sheets_service.py, sin tocar)."""
+        data = await self._get("/v1/equipos")
+        if not data or not data.get("ok"):
+            return []
+        disponibles: list[dict] = []
+        for e in data.get("equipos", []):
+            estado = str(e.get("estado", "")).strip().upper()
+            defectos = str(e.get("defectos", "")).strip()
+            observaciones = str(e.get("observaciones", "")).strip()
+            if estado != "DISPONIBLE" or defectos or observaciones:
+                continue
+            marca = str(e.get("marca", "")).strip()
+            modelo = str(e.get("modelo", "")).strip()
+            sistema_operativo = str(e.get("sistemaOperativo", "")).strip()
+            caracteristicas = str(e.get("caracteristicas", "")).strip()
+            disponibles.append({
+                "marca": marca,
+                "modelo": modelo,
+                "tipo": _inferir_tipo_equipo(marca, modelo, caracteristicas),
+                "sistema_operativo": sistema_operativo,
+                "caracteristicas": caracteristicas,
+            })
+        logger.info(f"Found {len(disponibles)} available rental equipos")
+        return disponibles

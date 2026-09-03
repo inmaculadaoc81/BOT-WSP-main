@@ -379,7 +379,7 @@ async def receive_message(request: Request):
 
         if intent.needs_rental_lookup:
             try:
-                equipos = await sheets_svc.get_available_equipos()
+                equipos = await kelatos_svc.get_available_equipos()
                 extra_context_parts.append(sheets_svc.format_equipos_for_prompt(equipos))
             except Exception as e:
                 logger.error(f"Error fetching rental equipment: {e}", exc_info=True)
@@ -985,7 +985,7 @@ async def chatwoot_webhook(request: Request):
 
         if intent.needs_rental_lookup:
             try:
-                equipos = await sheets_svc.get_available_equipos()
+                equipos = await kelatos_svc.get_available_equipos()
                 extra_context_parts.append(sheets_svc.format_equipos_for_prompt(equipos))
             except Exception as e:
                 logger.error(f"Error fetching rental equipment: {e}", exc_info=True)
