@@ -24,6 +24,7 @@ from database import Database
 from openai_service import OpenAIService
 from whatsapp_service import WhatsAppService
 from sheets_service import SheetsService
+from kelatos_api_service import KelatosApiService
 from chatwoot_service import ChatwootService
 # Odoo DESCONECTADO - reemplazado por EspoCRM.
 # from odoo_service import OdooService
@@ -44,6 +45,7 @@ db = Database()
 openai_svc = OpenAIService()
 whatsapp_svc = WhatsAppService()
 sheets_svc = SheetsService()
+kelatos_svc = KelatosApiService()
 chatwoot_svc = ChatwootService()
 # Odoo DESCONECTADO - reemplazado por EspoCRM.
 # odoo_svc = OdooService()
@@ -579,12 +581,12 @@ async def _repair_lookup(phone: str, message: str) -> str | None:
     if match:
         resguardo = match.group(1)
         try:
-            repair = await sheets_svc.get_repair_by_resguardo(resguardo)
+            repair = await kelatos_svc.get_repair_by_resguardo(resguardo)
             if repair:
                 logger.info(f"Found repair by resguardo {resguardo}")
                 return sheets_svc.format_repairs_for_prompt([repair])
             else:
-                logger.info(f"Resguardo {resguardo} not found in sheet")
+                logger.info(f"Resguardo {resguardo} not found")
                 return (
                     "[RESULTADO BUSQUEDA RESGUARDO]\n"
                     f"No se encontro ningun resguardo con el numero {resguardo}.\n"
@@ -597,7 +599,7 @@ async def _repair_lookup(phone: str, message: str) -> str | None:
 
     # Step 2: try by sender phone as a shortcut (in case registered from same number)
     try:
-        repairs = await sheets_svc.get_repairs_by_phone(phone)
+        repairs = await kelatos_svc.get_repairs_by_phone(phone)
         if repairs:
             logger.info(f"Found {len(repairs)} repairs by phone for {phone}")
             return sheets_svc.format_repairs_for_prompt(repairs)

@@ -23,11 +23,21 @@ class Settings(BaseSettings):
     DATABASE_PATH: str = "data/chat_history.db"
 
 
-    # Google Sheets
+    # Google Sheets — GOOGLE_SHEETS_ID (hoja "Reparaciones") ya NO se usa
+    # para buscar reparaciones (ver KELATOS_API_* abajo, kelatos_api_service.py);
+    # se mantiene la variable por si GOOGLE_PRICES_SHEET_ID sigue viva
+    # (precios/equipos no se migraron).
     GOOGLE_SHEETS_ID: str = ""
     GOOGLE_PRICES_SHEET_ID: str = ""
     GOOGLE_CREDENTIALS_PATH: str = "credentials/service_account.json"
     SHEETS_CACHE_TTL: int = 300  # seconds
+
+    # Kelatos API (dashboard Postgres) — reemplaza al Sheet "Reparaciones"
+    # como fuente real para buscar el estado de una reparacion por
+    # resguardo/telefono (kelatos_api_service.py). Mismo token interno
+    # (Bearer) que usa el propio dashboard para llamar a su API.
+    KELATOS_API_BASE_URL: str = "https://db.excelautomatizaciones.com/kelatos-api"
+    KELATOS_API_TOKEN: str = ""
 
 
     # Chatwoot
