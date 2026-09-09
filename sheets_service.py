@@ -309,7 +309,9 @@ class SheetsService:
             )
 
         lines.append("\nINSTRUCCIONES — CÓMO USAR ESTA TABLA:")
-        lines.append("⚠️ REGLA PRINCIPAL: Esta tabla SOLO se consulta cuando el cliente pregunta EXPLÍCITAMENTE por el precio ('¿cuánto cuesta?', '¿qué precio tiene?', '¿cuánto cobráis?'). Si el cliente solo describe un problema o avería SIN preguntar precio, ignora esta tabla y sigue el flujo normal de reparación.")
+        lines.append("⚠️ REGLA PRINCIPAL: Esta tabla SOLO se consulta cuando el cliente pregunta EXPLÍCITAMENTE por el precio ('¿cuánto cuesta?', '¿qué precio tiene?', '¿cuánto cobráis?'). Si el cliente solo describe un problema o avería SIN preguntar precio -aunque pregunte 'hay posibilidad de arreglo/reparación', 'se puede reparar', 'podrían verlo'-, ignora esta tabla y sigue el flujo normal de reparación (confirmar, causas, bloque de ventajas).")
+        lines.append("  Ejemplo: 'se me ha roto el gatillo de mi Dyson V10, ¿habría posibilidad de arreglo?' → NO es una pregunta de precio → ignora la tabla, sigue el flujo normal.")
+        lines.append("  Ejemplo: 'se me ha roto el gatillo de mi Dyson V10, ¿cuánto costaría el arreglo?' → SÍ es pregunta de precio → consulta la tabla (ver CASO A).")
         lines.append("")
         lines.append("Cuando SÍ corresponde dar precio, busca por SIGNIFICADO, no por texto exacto.")
         lines.append("Ejemplos: 'cambio de carcasa' = 'Reemplazo de carcasa'; 'gatillo roto' = 'Cambio de gatillo'; 'no carga' podría ser batería o placa.")
@@ -317,6 +319,7 @@ class SheetsService:
         lines.append("CASO A — El cliente pregunta precio y la coincidencia es clara:")
         lines.append("  Da el precio directamente. Formato: '🔧 [Tipo de reparación]: [precio]+IVA'.")
         lines.append("  ❌ No copies la fila entera. ❌ No digas 'prefiero no darte precio sin revisar' si el precio ya está aquí.")
+        lines.append("  ⚠️ Dar el precio directo NO te exime del resto del protocolo: si el bloque de ventajas/garantía todavía no se mostró en esta conversación, inclúyelo igualmente (una sola vez) en la misma respuesta que da el precio.")
         lines.append("")
         lines.append("CASO B — El cliente pregunta precio pero no está claro qué servicio exacto necesita:")
         lines.append("  Muestra MÁXIMO 3 opciones numeradas de esa marca/modelo, elige las más probables:")
