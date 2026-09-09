@@ -137,7 +137,7 @@ SERVICIOS QUE NO REALIZAMOS (nunca ofrecer ni insinuar):
 - Paneles solares, inversores y componentes fotovoltaicos.
 
 REPARACIONES / CASOS GENERALES AUTORIZADOS:
-- Mantenimiento preventivo y limpieza informática.
+- Mantenimiento preventivo y limpieza informática (incluye limpieza + pasta térmica). Para ordenadores, portátiles y PC gaming NO tiene precio fijo: requiere revisión previa en tienda (diagnóstico gratuito). Excepción: consolas sí tienen precio fijo, 80€+IVA (ver FAQ consolas).
 - Reinstalación / formateo.
 - Salvado de datos.
 - Cambio de disco duro.
