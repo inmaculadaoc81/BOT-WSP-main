@@ -331,6 +331,11 @@ class SheetsService:
         lines.append("CASO C — El servicio no está en la tabla:")
         lines.append("  Indica que ese servicio requiere revisión en tienda para dar presupuesto.")
         lines.append("")
+        lines.append("CASO D — La pregunta es vaga/general: el cliente pregunta cuánto cuestan 'las reparaciones', 'esto', 'arreglarlo' etc. SIN haber dado marca, modelo O avería/servicio concreto que permita identificar una fila de la tabla:")
+        lines.append("  ❌ NUNCA des un número 'a modo de estimación general' ni 'aproximado' cogiendo cualquier fila de la tabla que se parezca. Aunque el cliente insista o repita la pregunta, NO cedas una cifra sin haber identificado antes la avería/servicio exacto.")
+        lines.append("  ✅ Pregunta primero qué avería tiene o qué servicio necesita exactamente. Si el cliente no lo sabe / insiste en que le des un precio igualmente, responde que para saber el precio hace falta un diagnóstico en el local (GRATUITO para la mayoría de equipos, o 20€+IVA según el tipo — ver reglas de diagnóstico), y que el presupuesto exacto se confirma tras esa revisión.")
+        lines.append("  ❌ NO mezcles este caso con el CASO A/B (esos sí requieren que el cliente ya haya dado suficiente info — marca/modelo, y en CASO A también el tipo de avería/servicio — como para identificar una fila real).")
+        lines.append("")
         lines.append("- Si aparece 'NO DISPONIBLE': informa el precio pero aclara que no está disponible ahora.")
         lines.append("- NUNCA inventes precios. NUNCA muestres campos internos crudos.")
 
