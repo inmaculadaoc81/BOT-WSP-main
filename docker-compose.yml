@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    image: ghcr.io/keysiwin12/bot-wsp:latest
+    image: ghcr.io/inmaculadaoc81/bot-wsp:latest
     container_name: whatsapp-bot
     restart: unless-stopped
     ports:
