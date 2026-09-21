@@ -8,6 +8,13 @@ from sheets_service import REPAIR_COLUMNS, _extract_repair, phones_match, normal
 logger = logging.getLogger(__name__)
 
 
+class KelatosApiUnavailable(Exception):
+    """El backend Kelatos no respondio correctamente (dominio caido, timeout,
+    401, 5xx...). Se distingue de un 404 real (resguardo/telefono que
+    efectivamente no existe) para que el bot nunca le diga al cliente que su
+    resguardo esta mal cuando en realidad la API esta inaccesible."""
+
+
 def _inferir_tipo_equipo(marca: str, modelo: str, caracteristicas: str) -> str:
     """El Sheet 'Equipos' original tenia una columna tipo con valores como
     'Gamer'/'Surface' que _categoria() (sheets_service.format_equipos_for_prompt)
@@ -79,7 +86,7 @@ class KelatosApiService:
     async def _get(self, path: str, params: dict | None = None) -> dict | None:
         if not self.base_url or not self.token:
             logger.error("KELATOS_API_BASE_URL/KELATOS_API_TOKEN no configurados")
-            return None
+            raise KelatosApiUnavailable("KELATOS_API_BASE_URL/KELATOS_API_TOKEN no configurados")
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
@@ -93,10 +100,10 @@ class KelatosApiService:
                 return resp.json()
         except httpx.HTTPStatusError as e:
             logger.error(f"Kelatos API HTTP error on {path}: {e.response.status_code} - {e.response.text}")
-            return None
+            raise KelatosApiUnavailable(f"HTTP {e.response.status_code}") from e
         except Exception as e:
             logger.error(f"Error calling Kelatos API {path}: {e}", exc_info=True)
-            return None
+            raise KelatosApiUnavailable(str(e)) from e
 
     async def get_repair_by_resguardo(self, resguardo: str, phone: str | None = None) -> dict | None:
         """Reproduce SheetsService.get_repair_by_resguardo() contra
@@ -143,7 +150,11 @@ class KelatosApiService:
         estado=DISPONIBLE, sin defectos, sin observaciones. Devuelve la misma
         forma de dict (marca/modelo/tipo/sistema_operativo/caracteristicas)
         que espera format_equipos_for_prompt() (sheets_service.py, sin tocar)."""
-        data = await self._get("/v1/equipos")
+        try:
+            data = await self._get("/v1/equipos")
+        except KelatosApiUnavailable as e:
+            logger.error(f"No se pudo consultar equipos de alquiler: {e}")
+            return []
         if not data or not data.get("ok"):
             return []
         disponibles: list[dict] = []

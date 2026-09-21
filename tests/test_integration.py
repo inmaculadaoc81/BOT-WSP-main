@@ -142,6 +142,7 @@ def _mock_external_services():
         patch("main.whatsapp_svc") as wa,
         patch("main.chatwoot_svc") as cw,
         patch("main.sheets_svc") as sh,
+        patch("main.kelatos_svc") as kel,
         patch("main.espocrm_svc") as espo,
         patch("main.calendar_svc") as cal,
     ):
@@ -154,10 +155,16 @@ def _mock_external_services():
         cw.assign_handoff_agent = AsyncMock(return_value=13)
         cw.get_conversation_labels = AsyncMock(return_value=[])
 
-        sh.get_repairs_by_phone = AsyncMock(return_value=[])
         sh.get_all_prices = AsyncMock(return_value=[])
         sh.format_repairs_for_prompt = MagicMock(return_value="[REPAIRS]")
         sh.format_prices_for_prompt = MagicMock(return_value="[PRICES]")
+
+        # Repair/resguardo lookups go through kelatos_svc (KelatosApiService),
+        # not sheets_svc, since the Sheet "Reparaciones" was replaced by the
+        # dashboard's Postgres API (see kelatos_api_service.py).
+        kel.get_repairs_by_phone = AsyncMock(return_value=[])
+        kel.get_repair_by_resguardo = AsyncMock(return_value=None)
+        kel.get_available_equipos = AsyncMock(return_value=[])
 
         espo.create_lead = AsyncMock(return_value="lead-42")
         espo.schedule_lead_from_conversation = MagicMock()
@@ -169,6 +176,7 @@ def _mock_external_services():
             "whatsapp": wa,
             "chatwoot": cw,
             "sheets": sh,
+            "kelatos": kel,
             "espocrm": espo,
             "calendar": cal,
         }
@@ -236,14 +244,14 @@ class TestWhatsAppWebhookFlow:
         """When intent.needs_repair_lookup, sheets data is fetched and injected."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
-        _mock_external_services["sheets"].get_repairs_by_phone.return_value = [
+        _mock_external_services["kelatos"].get_repairs_by_phone.return_value = [
             {"resguardo": "R001", "equipo_modelo": "HP Pavilion", "estado": "En reparación"}
         ]
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "como va mi reparacion"))
 
         assert resp.status_code == 200
-        _mock_external_services["sheets"].get_repairs_by_phone.assert_called_once_with("34600111222")
+        _mock_external_services["kelatos"].get_repairs_by_phone.assert_called_once_with("34600111222")
         _mock_external_services["sheets"].format_repairs_for_prompt.assert_called_once()
 
         # extra_context passed to generate_response
@@ -282,7 +290,7 @@ class TestWhatsAppWebhookFlow:
         mock_intent.return_value = IntentResult(
             needs_repair_lookup=True, needs_prices=True, wants_appointment=True
         )
-        _mock_external_services["sheets"].get_repairs_by_phone.return_value = [{"resguardo": "R001"}]
+        _mock_external_services["kelatos"].get_repairs_by_phone.return_value = [{"resguardo": "R001"}]
         _mock_external_services["sheets"].get_all_prices.return_value = [{"marca": "HP"}]
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "todo"))
@@ -315,15 +323,15 @@ class TestWhatsAppWebhookFlow:
         """
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
-        _mock_external_services["sheets"].get_repairs_by_phone.return_value = []
-        _mock_external_services["sheets"].get_repair_by_resguardo = AsyncMock(
+        _mock_external_services["kelatos"].get_repairs_by_phone.return_value = []
+        _mock_external_services["kelatos"].get_repair_by_resguardo = AsyncMock(
             return_value={"resguardo": "17058", "equipo_modelo": "HP Pavilion", "estado": "En reparación"}
         )
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "mi resguardo es 17058"))
 
         assert resp.status_code == 200
-        _mock_external_services["sheets"].get_repair_by_resguardo.assert_called_once_with("17058")
+        _mock_external_services["kelatos"].get_repair_by_resguardo.assert_called_once_with("17058")
         call_kwargs = mock_openai_generate.generate_response.call_args.kwargs
         assert call_kwargs["extra_context"] is not None
 
@@ -331,8 +339,8 @@ class TestWhatsAppWebhookFlow:
         """When the resguardo number doesn't exist, the bot asks the client to double-check it."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
-        _mock_external_services["sheets"].get_repairs_by_phone.return_value = []
-        _mock_external_services["sheets"].get_repair_by_resguardo = AsyncMock(return_value=None)
+        _mock_external_services["kelatos"].get_repairs_by_phone.return_value = []
+        _mock_external_services["kelatos"].get_repair_by_resguardo = AsyncMock(return_value=None)
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "17058"))
 
@@ -344,7 +352,7 @@ class TestWhatsAppWebhookFlow:
         """When no repairs found by phone and no resguardo in message, the bot asks for the resguardo."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
-        _mock_external_services["sheets"].get_repairs_by_phone.return_value = []
+        _mock_external_services["kelatos"].get_repairs_by_phone.return_value = []
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "quiero saber el estado"))
 
@@ -548,13 +556,13 @@ class TestChatwootWebhookFlow:
         """Repair lookup uses phone from contact_inbox.source_id."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
-        _mock_external_services["sheets"].get_repairs_by_phone.return_value = [{"resguardo": "R100"}]
+        _mock_external_services["kelatos"].get_repairs_by_phone.return_value = [{"resguardo": "R100"}]
 
         body = _chatwoot_webhook_body(104, "como va mi reparacion", phone="34699887766")
         resp = await client.post("/chatwoot/webhook", json=body)
 
         assert resp.status_code == 200
-        _mock_external_services["sheets"].get_repairs_by_phone.assert_called_once_with("34699887766")
+        _mock_external_services["kelatos"].get_repairs_by_phone.assert_called_once_with("34699887766")
 
     async def test_chatwoot_envio_with_calendar(self, client, mock_intent, mock_openai_generate, _mock_external_services, _isolated_db):
         """Chatwoot flow also handles CONFIRMAR_ENVIO correctly."""
@@ -744,10 +752,10 @@ class TestHealthCheck:
 
 class TestErrorResilience:
     async def test_sheets_error_does_not_break_flow(self, client, mock_intent, mock_openai_generate, _mock_external_services):
-        """If sheets throws, the message flow still completes (without repair data)."""
+        """If the repair lookup throws, the message flow still completes (without repair data)."""
         from intent_classifier import IntentResult
         mock_intent.return_value = IntentResult(needs_repair_lookup=True)
-        _mock_external_services["sheets"].get_repairs_by_phone.side_effect = Exception("Sheets API down")
+        _mock_external_services["kelatos"].get_repairs_by_phone.side_effect = Exception("Kelatos API down")
 
         resp = await client.post("/webhook", json=_whatsapp_webhook_body("34600111222", "mi reparacion"))
 

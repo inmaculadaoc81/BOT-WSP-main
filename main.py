@@ -24,7 +24,7 @@ from database import Database
 from openai_service import OpenAIService
 from whatsapp_service import WhatsAppService
 from sheets_service import SheetsService
-from kelatos_api_service import KelatosApiService
+from kelatos_api_service import KelatosApiService, KelatosApiUnavailable
 from chatwoot_service import ChatwootService
 # Odoo DESCONECTADO - reemplazado por EspoCRM.
 # from odoo_service import OdooService
@@ -594,6 +594,16 @@ async def _repair_lookup(phone: str, message: str) -> str | None:
                     "ese numero de resguardo y pidele que lo revise y lo vuelva a enviar. "
                     "Si insiste en que es correcto, ofrece transferirlo con un compañero."
                 )
+        except KelatosApiUnavailable as e:
+            logger.error(f"Kelatos API no disponible al buscar resguardo {resguardo}: {e}")
+            return (
+                "[RESULTADO BUSQUEDA RESGUARDO]\n"
+                "ERROR TECNICO: el sistema de consulta de reparaciones no esta disponible ahora mismo. "
+                "Esto NO significa que el resguardo sea invalido.\n"
+                "INSTRUCCIONES: Discúlpate con el cliente, indica que el sistema de consulta está teniendo "
+                "un problema técnico temporal y ofrece transferirlo con un compañero para que revise su "
+                "reparación manualmente. NUNCA digas que el número de resguardo está mal o no se encuentra."
+            )
         except Exception as e:
             logger.error(f"Error fetching resguardo {resguardo}: {e}", exc_info=True)
 
@@ -603,6 +613,15 @@ async def _repair_lookup(phone: str, message: str) -> str | None:
         if repairs:
             logger.info(f"Found {len(repairs)} repairs by phone for {phone}")
             return sheets_svc.format_repairs_for_prompt(repairs)
+    except KelatosApiUnavailable as e:
+        logger.error(f"Kelatos API no disponible al buscar por telefono: {e}")
+        return (
+            "[RESULTADO BUSQUEDA REPARACIONES]\n"
+            "ERROR TECNICO: el sistema de consulta de reparaciones no esta disponible ahora mismo.\n"
+            "INSTRUCCIONES: Discúlpate con el cliente, indica que el sistema de consulta está teniendo "
+            "un problema técnico temporal y pídele su número de resguardo para intentar la búsqueda "
+            "directa, u ofrece transferirlo con un compañero."
+        )
     except Exception as e:
         logger.error(f"Error fetching repairs by phone: {e}", exc_info=True)
 
