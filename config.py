@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # como fuente real para buscar el estado de una reparacion por
     # resguardo/telefono (kelatos_api_service.py). Mismo token interno
     # (Bearer) que usa el propio dashboard para llamar a su API.
-    KELATOS_API_BASE_URL: str = "https://db.excelautomatizaciones.com/kelatos-api"
+    KELATOS_API_BASE_URL: str = "https://db.affirmatechnology.com/kelatos-api"
     KELATOS_API_TOKEN: str = ""
 
 
