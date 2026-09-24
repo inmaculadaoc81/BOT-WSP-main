@@ -181,7 +181,7 @@ async def lifespan(app: FastAPI):
     logger.info("Database closed")
 
 
-app = FastAPI(title="WhatsApp Bot API", version="1.0.1", lifespan=lifespan)
+app = FastAPI(title="WhatsApp Bot API", version="1.0.2", lifespan=lifespan)
 app.state.limiter = limiter
 
 
