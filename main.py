@@ -351,11 +351,19 @@ async def receive_message(request: Request):
                 await _handle_handoff(sender)
                 return {"status": "handoff"}
             else:
-                msg = get_outside_hours_message()
-                await db.save_message(sender, "assistant", msg)
-                await whatsapp_svc.send_message(to=sender, text=msg)
-                logger.info(f"Handoff denied for {sender} — outside business hours")
-                return {"status": "outside_hours"}
+                # Outside hours: show the notice only once. On subsequent messages
+                # keep the bot active so it can continue helping in the customer's language.
+                if not _outside_hours_already_sent(history):
+                    msg = get_outside_hours_message()
+                    await db.save_message(sender, "assistant", msg)
+                    await whatsapp_svc.send_message(to=sender, text=msg)
+                    logger.info(f"Handoff denied for {sender} — outside business hours; notice sent")
+                    return {"status": "outside_hours"}
+                logger.info(
+                    f"Handoff denied for {sender} — outside business hours; "
+                    "notice already sent, continuing with bot"
+                )
+                intent.needs_human = False
 
         # Fetch only what's needed based on classification
         extra_context_parts = []
@@ -423,8 +431,8 @@ async def receive_message(request: Request):
             else:
                 # Outside hours: keep whatever the model already answered, append closing note
                 clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
-                closing = get_outside_hours_message()
-                full_msg = f"{clean_response}\n\n{closing}" if clean_response else closing
+                closing = "" if _outside_hours_already_sent(history) else get_outside_hours_message()
+                full_msg = f"{clean_response}\n\n{closing}".strip() if closing else clean_response
                 await db.save_message(sender, "assistant", full_msg)
                 await whatsapp_svc.send_message(to=sender, text=full_msg)
             return {"status": "handoff"}
@@ -527,6 +535,17 @@ def get_outside_hours_message() -> str:
         f"🕐 En este momento estamos fuera de horario. Un compañero te atenderá "
         f"{when}.{contact_line}"
     )
+
+
+def _outside_hours_already_sent(history) -> bool:
+    """Return True when the outside-hours notice is already in recent history."""
+    marker = "En este momento estamos fuera de horario."
+    for item in history or []:
+        role = item.get("role") if isinstance(item, dict) else getattr(item, "role", None)
+        content = item.get("content", "") if isinstance(item, dict) else getattr(item, "content", "")
+        if role == "assistant" and marker in (content or ""):
+            return True
+    return False
 
 
 async def _handle_handoff(sender_key: str, conversation_id: int | None = None):
@@ -969,11 +988,22 @@ async def chatwoot_webhook(request: Request):
                 await _handle_handoff(sender_key, conversation_id=conversation_id)
                 return {"status": "handoff"}
             else:
-                msg = get_outside_hours_message()
-                await db.save_message(history_key, "assistant", msg)
-                await chatwoot_svc.send_message(conversation_id, msg)
-                logger.info(f"Handoff denied for conversation {conversation_id} — outside business hours")
-                return {"status": "outside_hours"}
+                # Outside hours: show the notice only once. On subsequent messages
+                # keep the bot active so it can continue helping in the customer's language.
+                if not _outside_hours_already_sent(history):
+                    msg = get_outside_hours_message()
+                    await db.save_message(history_key, "assistant", msg)
+                    await chatwoot_svc.send_message(conversation_id, msg)
+                    logger.info(
+                        f"Handoff denied for conversation {conversation_id} — "
+                        "outside business hours; notice sent"
+                    )
+                    return {"status": "outside_hours"}
+                logger.info(
+                    f"Handoff denied for conversation {conversation_id} — "
+                    "outside business hours; notice already sent, continuing with bot"
+                )
+                intent.needs_human = False
 
         # Fetch only what's needed based on classification
         extra_context_parts = []
@@ -1048,8 +1078,8 @@ async def chatwoot_webhook(request: Request):
             else:
                 # Outside hours: keep whatever the model already answered, append closing note
                 clean_response = ai_response.replace("TRANSFERIR_AGENTE", "").strip()
-                closing = get_outside_hours_message()
-                full_msg = f"{clean_response}\n\n{closing}" if clean_response else closing
+                closing = "" if _outside_hours_already_sent(history) else get_outside_hours_message()
+                full_msg = f"{clean_response}\n\n{closing}".strip() if closing else clean_response
                 await db.save_message(history_key, "assistant", full_msg)
                 await chatwoot_svc.send_message(conversation_id, full_msg)
             return {"status": "handoff"}
