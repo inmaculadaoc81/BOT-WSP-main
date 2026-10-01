@@ -608,10 +608,14 @@ async def _repair_lookup(phone: str, message: str) -> str | None:
                 logger.info(f"Resguardo {resguardo} not found")
                 return (
                     "[RESULTADO BUSQUEDA RESGUARDO]\n"
-                    f"No se encontro ningun resguardo con el numero {resguardo}.\n"
+                    f"No se encontro ningun resguardo con el numero {resguardo}. NO EXISTE NINGUN DATO "
+                    "de equipo, marca, modelo ni estado para este numero.\n"
                     "INSTRUCCIONES: Informa al cliente amablemente que no se encuentra "
                     "ese numero de resguardo y pidele que lo revise y lo vuelva a enviar. "
-                    "Si insiste en que es correcto, ofrece transferirlo con un compañero."
+                    "Si insiste en que es correcto, ofrece transferirlo con un compañero. "
+                    "PROHIBIDO ABSOLUTO: NO inventes ni menciones ningun estado de reparacion "
+                    "(Reparado, En Reparacion, Pendiente, etc.) ni ningun equipo/marca/modelo para "
+                    f"este resguardo {resguardo} bajo ninguna circunstancia — no existe ese dato."
                 )
         except KelatosApiUnavailable as e:
             logger.error(f"Kelatos API no disponible al buscar resguardo {resguardo}: {e}")
