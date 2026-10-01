@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import httpx
@@ -6,6 +7,13 @@ from config import settings
 from sheets_service import REPAIR_COLUMNS, _extract_repair, phones_match, normalize_phone
 
 logger = logging.getLogger(__name__)
+
+# Reintentos ante fallos transitorios (timeout, caida momentanea, 5xx) antes
+# de darnos por vencidos y avisar al cliente de un problema tecnico. NO se
+# reintenta ante 404 (resguardo real no encontrado) ni 4xx como 401/403
+# (credenciales invalidas: reintentar no lo arregla, solo demora la respuesta).
+_MAX_INTENTOS = 3
+_ESPERA_ENTRE_INTENTOS = 1.0  # segundos
 
 
 class KelatosApiUnavailable(Exception):
@@ -87,23 +95,42 @@ class KelatosApiService:
         if not self.base_url or not self.token:
             logger.error("KELATOS_API_BASE_URL/KELATOS_API_TOKEN no configurados")
             raise KelatosApiUnavailable("KELATOS_API_BASE_URL/KELATOS_API_TOKEN no configurados")
-        try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(
-                    f"{self.base_url}{path}",
-                    headers={"Authorization": f"Bearer {self.token}"},
-                    params=params,
+
+        last_error: Exception | None = None
+        for intento in range(1, _MAX_INTENTOS + 1):
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.get(
+                        f"{self.base_url}{path}",
+                        headers={"Authorization": f"Bearer {self.token}"},
+                        params=params,
+                    )
+                    if resp.status_code == 404:
+                        return None
+                    resp.raise_for_status()
+                    return resp.json()
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code < 500:
+                    # 401/403/etc: error del cliente, reintentar no sirve de nada.
+                    logger.error(f"Kelatos API HTTP error on {path}: {e.response.status_code} - {e.response.text}")
+                    raise KelatosApiUnavailable(f"HTTP {e.response.status_code}") from e
+                last_error = e
+                logger.warning(
+                    f"Kelatos API HTTP {e.response.status_code} en {path} "
+                    f"(intento {intento}/{_MAX_INTENTOS})"
                 )
-                if resp.status_code == 404:
-                    return None
-                resp.raise_for_status()
-                return resp.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Kelatos API HTTP error on {path}: {e.response.status_code} - {e.response.text}")
-            raise KelatosApiUnavailable(f"HTTP {e.response.status_code}") from e
-        except Exception as e:
-            logger.error(f"Error calling Kelatos API {path}: {e}", exc_info=True)
-            raise KelatosApiUnavailable(str(e)) from e
+            except (httpx.TimeoutException, httpx.ConnectError) as e:
+                last_error = e
+                logger.warning(f"Kelatos API no responde en {path} (intento {intento}/{_MAX_INTENTOS}): {e}")
+            except Exception as e:
+                logger.error(f"Error calling Kelatos API {path}: {e}", exc_info=True)
+                raise KelatosApiUnavailable(str(e)) from e
+
+            if intento < _MAX_INTENTOS:
+                await asyncio.sleep(_ESPERA_ENTRE_INTENTOS)
+
+        logger.error(f"Kelatos API no disponible tras {_MAX_INTENTOS} intentos en {path}: {last_error}")
+        raise KelatosApiUnavailable(str(last_error))
 
     async def get_repair_by_resguardo(self, resguardo: str, phone: str | None = None) -> dict | None:
         """Reproduce SheetsService.get_repair_by_resguardo() contra
