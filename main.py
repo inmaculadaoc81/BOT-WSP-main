@@ -169,6 +169,41 @@ def _is_budget_decision(text: str, history: list[dict]) -> bool:
     return False
 
 
+# El prompt le exige al modelo cerrar el bloque de beneficios con este aviso
+# (ver config.py, seccion ESTADO... PROTOCOLO DE REPARACION), pero en la
+# practica el modelo lo omite con cierta frecuencia pese a varias rondas de
+# refuerzo del prompt (reportado repetidas veces en produccion). Como ultima
+# red de seguridad, se inserta por codigo si el bloque de beneficios aparecio
+# sin el aviso, en vez de seguir confiando unicamente en que el modelo lo
+# recuerde.
+_BENEFITS_BLOCK_MARKER = "Lo bueno es que trabajamos con total transparencia"
+_WARRANTY_DISCLAIMER_KEY = "servicio técnico independiente"
+_WARRANTY_DISCLAIMER_TEXT = (
+    "ℹ️ Recuerda, somos un servicio técnico independiente. "
+    "No reparamos equipos con garantía del fabricante."
+)
+
+
+def _ensure_warranty_disclaimer(text: str) -> str:
+    """Si la respuesta incluye el bloque de beneficios pero el modelo omitio
+    el aviso de garantia de fabricante, lo inserta justo despues de la ultima
+    linea con ✅ (antes de cualquier otra cosa, como las opciones de entrega)."""
+    if _BENEFITS_BLOCK_MARKER not in text or _WARRANTY_DISCLAIMER_KEY in text:
+        return text
+
+    lines = text.split("\n")
+    last_bullet_idx = None
+    for i, line in enumerate(lines):
+        if line.strip().startswith("✅"):
+            last_bullet_idx = i
+    if last_bullet_idx is None:
+        return text
+
+    logger.warning("Bloque de beneficios sin aviso de garantia de fabricante — insertado por codigo")
+    lines[last_bullet_idx + 1:last_bullet_idx + 1] = ["", _WARRANTY_DISCLAIMER_TEXT]
+    return "\n".join(lines)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
@@ -419,6 +454,7 @@ async def receive_message(request: Request):
                 brand_faq=brand_faq,
             )
         logger.info("RAW AI RESPONSE (WhatsApp):\n%s", ai_response)
+        ai_response = _ensure_warranty_disclaimer(ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:
@@ -1070,6 +1106,7 @@ async def chatwoot_webhook(request: Request):
                 brand_faq=brand_faq,
             )
         logger.info("RAW AI RESPONSE (Chatwoot):\n%s", ai_response)
+        ai_response = _ensure_warranty_disclaimer(ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:
