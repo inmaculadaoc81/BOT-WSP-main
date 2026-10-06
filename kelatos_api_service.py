@@ -204,3 +204,34 @@ class KelatosApiService:
             })
         logger.info(f"Found {len(disponibles)} available rental equipos")
         return disponibles
+
+    async def get_cargadores_disponibles(self) -> list[dict]:
+        """Catalogo real de cargadores de portatil/ordenador (Don Cargador),
+        desde GET /v1/stock_piezas (tabla "Stock de Piezas" del dashboard,
+        filtrada a categoria CARGADOR). Incluye precio real y stock
+        disponible — no es solo gestion bajo pedido ciega, hay unidades ya
+        en tienda. Se excluyen filas inactivas y entradas de prueba
+        (nombre contiene "prueba", usadas para testear el dashboard)."""
+        try:
+            data = await self._get("/v1/stock_piezas")
+        except KelatosApiUnavailable as e:
+            logger.error(f"No se pudo consultar stock de cargadores: {e}")
+            return []
+        if not data or not data.get("ok"):
+            return []
+        cargadores: list[dict] = []
+        for r in data.get("rows", []):
+            if r.get("activo") is False:
+                continue
+            categoria = str(r.get("categoria", "")).strip().upper()
+            nombre = str(r.get("nombre", "")).strip()
+            if "CARGADOR" not in categoria or "PRUEBA" in nombre.upper():
+                continue
+            cargadores.append({
+                "referencia": str(r.get("referencia", "")).strip(),
+                "nombre": nombre,
+                "precio_cliente": str(r.get("precio_cliente", "")).strip(),
+                "stock_disponible": r.get("stock_disponible") or 0,
+            })
+        logger.info(f"Found {len(cargadores)} cargadores en stock_piezas")
+        return cargadores

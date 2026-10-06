@@ -19,6 +19,7 @@ class IntentResult:
     wants_appointment: bool = False
     needs_human: bool = False
     needs_rental_lookup: bool = False
+    needs_charger_lookup: bool = False
     brand: str | None = None
 
 
@@ -81,6 +82,10 @@ async def classify_intent(
         '- "needs_rental_lookup": true si el usuario pregunta qué equipos hay disponibles para alquilar, '
         "qué modelos tienen, si tienen gaming/Mac/Windows/Surface para alquiler, qué portátiles tienen, "
         "disponibilidad de equipos de alquiler, o cualquier consulta sobre el catálogo o stock de alquiler.\n"
+        '- "needs_charger_lookup": true si el usuario pregunta por la disponibilidad, precio o compra de un '
+        "cargador/adaptador de corriente/fuente de alimentación para portátil u ordenador, con o sin marca/modelo "
+        "específico. Ejemplos: 'teneis cargador para Dell', 'necesito un cargador Asus de 65W', 'cargador para "
+        "mi portatil HP', 'busco un adaptador de corriente para mi ordenador'.\n"
         '- "brand": el slug de la marca si el usuario menciona o pregunta sobre una marca específica. '
         f"Valores válidos: {brands_str}, o null si no menciona ninguna marca.\n"
         "Devuelve SOLO JSON válido, sin explicación."
@@ -114,6 +119,7 @@ async def classify_intent(
             wants_appointment=bool(data.get("wants_appointment", False)),
             needs_human=bool(data.get("needs_human", False)),
             needs_rental_lookup=bool(data.get("needs_rental_lookup", False)),
+            needs_charger_lookup=bool(data.get("needs_charger_lookup", False)),
             brand=data.get("brand"),
         )
 
