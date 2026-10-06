@@ -213,7 +213,11 @@ class KelatosApiService:
         en tienda. Se excluyen filas inactivas y entradas de prueba
         (nombre contiene "prueba", usadas para testear el dashboard)."""
         try:
-            data = await self._get("/v1/stock_piezas")
+            # limit explicito: el default de la API es 100 y ya hay 87 piezas
+            # activas en total (todas las categorias, no solo cargadores) —
+            # sin esto, si el inventario crece se perderian silenciosamente
+            # filas mas alla de la pagina 1.
+            data = await self._get("/v1/stock_piezas", {"limit": 1000})
         except KelatosApiUnavailable as e:
             logger.error(f"No se pudo consultar stock de cargadores: {e}")
             return []
