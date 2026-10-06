@@ -569,7 +569,7 @@ class SheetsService:
         lines.append(f"Total cargadores en catálogo interno: {len(cargadores)}\n")
         for c in cargadores:
             nombre = c.get("nombre", "")
-            precio = c.get("precio_cliente", "")
+            precio = _format_price_es(c.get("precio_cliente", ""))
             stock = c.get("stock_disponible", 0) or 0
             disponibilidad = f"EN STOCK ({stock} uds)" if stock > 0 else "SIN STOCK (bajo pedido)"
             lines.append(f"- {nombre} | Precio: {precio}€ | {disponibilidad}")
@@ -585,6 +585,17 @@ class SheetsService:
         lines.append("- ❌ PROHIBIDO inventar un precio, modelo o nivel de stock que no aparezca exactamente en esta lista.")
 
         return "\n".join(lines)
+
+
+def _format_price_es(raw: str) -> str:
+    """Format an API price string ("70.25", dot decimal) into the Spanish
+    display convention used everywhere else in this bot ("70,25", comma
+    decimal). Falls back to the raw string if it's not a plain number."""
+    raw = (raw or "").strip()
+    try:
+        return f"{float(raw):.2f}".replace(".", ",")
+    except ValueError:
+        return raw
 
 
 def _shorten_model(model: str) -> str:
