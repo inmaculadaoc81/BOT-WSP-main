@@ -554,6 +554,38 @@ class SheetsService:
 
         return "\n".join(lines)
 
+    def format_cargadores_for_prompt(self, cargadores: list[dict]) -> str:
+        """Format the real Don Cargador stock (price + availability) as context for the AI."""
+        if not cargadores:
+            return (
+                "[CARGADORES DISPONIBLES - DON CARGADOR]\n"
+                "No se encontraron cargadores en nuestro catalogo interno.\n"
+                "INSTRUCCIONES: Dirige al cliente a revisar el catálogo online completo en "
+                "https://cargadordeportatil.es/catalogo, o si tampoco lo encuentra ahí, ofrece "
+                "gestionarlo bajo pedido (ver sección PRODUCTOS, PIEZAS Y REPUESTOS)."
+            )
+
+        lines = ["[CARGADORES DISPONIBLES - DON CARGADOR]"]
+        lines.append(f"Total cargadores en catálogo interno: {len(cargadores)}\n")
+        for c in cargadores:
+            nombre = c.get("nombre", "")
+            precio = c.get("precio_cliente", "")
+            stock = c.get("stock_disponible", 0) or 0
+            disponibilidad = f"EN STOCK ({stock} uds)" if stock > 0 else "SIN STOCK (bajo pedido)"
+            lines.append(f"- {nombre} | Precio: {precio}€ | {disponibilidad}")
+
+        lines.append("")
+        lines.append("INSTRUCCIONES OBLIGATORIAS — CARGADORES:")
+        lines.append("- Estos son datos REALES de nuestro catálogo interno (Don Cargador). Usa SOLO esta información — nunca inventes un modelo, precio o stock que no esté literalmente en esta lista.")
+        lines.append("- Si el cliente menciona una marca (Dell, HP, Lenovo, Acer, Asus/MSI/Gigabyte, Dyson, etc.), filtra y muestra SOLO los cargadores de esa marca.")
+        lines.append("- Si hay varios modelos de la misma marca, muestra los que mejor coincidan con lo que describe el cliente (vatios, tipo de conector/boquilla, modelo de equipo) para ayudarle a identificar el suyo — no hace falta listar todos si son muchos.")
+        lines.append("- Si el cargador está EN STOCK: confirma el precio y que está disponible para venta inmediata (puede recogerlo en el local).")
+        lines.append("- Si está SIN STOCK: indica que no hay unidades físicas ahora mismo pero se puede gestionar bajo pedido, sin prometer fecha exacta.")
+        lines.append("- Si NINGÚN cargador de esta lista coincide con lo que pide el cliente (marca/modelo no aparece), dirígelo a revisar el catálogo online completo (https://cargadordeportatil.es/catalogo) o a enviar marca y modelo por correo a soporte@kelatos.com para gestionarlo bajo pedido.")
+        lines.append("- ❌ PROHIBIDO inventar un precio, modelo o nivel de stock que no aparezca exactamente en esta lista.")
+
+        return "\n".join(lines)
+
 
 def _shorten_model(model: str) -> str:
     """Shorten a full model identifier to its family prefix.
