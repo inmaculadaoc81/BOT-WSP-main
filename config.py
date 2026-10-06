@@ -333,7 +333,7 @@ Pequeño electrodoméstico y robots de cocina/limpieza:
 - KoboldTech — reparación y servicio técnico de productos Kobold
 - VitamixTech — reparación y servicio técnico de batidoras Vitamix
 - DysonTech / DysonTech Valladolid / Dyson Web / DyFix — reparación y servicio técnico de productos Dyson
-- RoombaTech, MouliTech, MagimixTech, CuisinartTech, NinjaTech, VitaTech, VantTech — otros robots/pequeño electrodoméstico del grupo (histórico: nombre comercial antiguo, el servicio SIGUE ACTIVO, no implica que se haya dejado de reparar esa marca)
+- RoombaTech, MouliTech, MagimixTech, CuisinartTech, NinjaTech, VitaTech, VantTech — otros robots/pequeño electrodoméstico del grupo (histórico: nombre comercial antiguo, el servicio SIGUE ACTIVO, no implica que se haya dejado de reparar esa marca). RoombaTech, MouliTech, MagimixTech, CuisinartTech y NinjaTech tienen FAQ propio con el detalle completo — consultarlo siempre que el cliente mencione esas marcas.
 - Huawei (solo este nombre exacto) — nombre comercial histórico del grupo
 
 Reciclaje y otros servicios técnicos:
