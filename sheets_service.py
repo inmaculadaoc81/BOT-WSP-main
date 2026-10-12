@@ -569,6 +569,7 @@ class SheetsService:
             )
 
         lines = ["[CARGADORES DISPONIBLES - DON CARGADOR]"]
+        lines.append("⚠️ USO INTERNO — esta lista y su formato (nombre | Precio | disponibilidad) son SOLO para que tu decidas que decir. NUNCA la copies ni la muestres tal cual al cliente.")
         lines.append(f"Total cargadores en catálogo interno: {len(cargadores)}\n")
         for c in cargadores:
             nombre = c.get("nombre", "")
@@ -582,8 +583,14 @@ class SheetsService:
         lines.append("- Estos son datos REALES de nuestro catálogo interno (Don Cargador). Usa SOLO esta información — nunca inventes un modelo, precio o stock que no esté literalmente en esta lista.")
         lines.append("- Si el cliente menciona una marca (Dell, HP, Lenovo, Acer, Asus/MSI/Gigabyte, Dyson, etc.), filtra y muestra SOLO los cargadores de esa marca.")
         lines.append("- Si hay varios modelos de la misma marca, muestra los que mejor coincidan con lo que describe el cliente (vatios, tipo de conector/boquilla, modelo de equipo) para ayudarle a identificar el suyo — no hace falta listar todos si son muchos.")
-        lines.append("- Si el cargador está EN STOCK: confirma el precio y que está disponible para venta inmediata (puede recogerlo en el local).")
-        lines.append("- Si está SIN STOCK: indica que no hay unidades físicas ahora mismo pero se puede gestionar bajo pedido, sin prometer fecha exacta.")
+        lines.append("- FORMATO OBLIGATORIO al mostrarle las opciones al cliente (igual que en ALQUILER DE PORTÁTILES):")
+        lines.append("    Opción 1️⃣: *[nombre del cargador]* — [precio]€")
+        lines.append("    Opción 2️⃣: *[nombre del cargador]* — [precio]€")
+        lines.append("    _(y así sucesivamente)_")
+        lines.append("  ❌ PROHIBIDO usar guiones, puntos o bullets. Usar siempre 'Opción 1️⃣:' 'Opción 2️⃣:' etc.")
+        lines.append("- ❌ NUNCA muestres al cliente el número de unidades en stock, ni la palabra 'stock', 'uds' o 'unidades', ni copies literalmente 'EN STOCK (X uds)' / 'SIN STOCK'. Esa parte de la lista es solo para que TÚ decidas qué decir, nunca para pegarla en el mensaje.")
+        lines.append("- Si el cargador está EN STOCK (stock_disponible > 0): no menciones disponibilidad salvo que el cliente pregunte — y si pregunta, responde de forma natural sin número ni la palabra 'stock' (ej: 'sí, lo tenemos disponible para recogida inmediata en tienda').")
+        lines.append("- Si está SIN STOCK (stock_disponible = 0): indica de forma natural que hay que pedirlo, sin prometer fecha exacta y sin usar la palabra 'stock' (ej: 'ese modelo lo gestionamos bajo pedido, no tenemos unidad física ahora mismo').")
         lines.append("- Si NINGÚN cargador de esta lista coincide con lo que pide el cliente (marca/modelo no aparece), dirígelo a revisar el catálogo online completo (https://cargadordeportatil.es/catalogo) o a enviar marca y modelo por correo a soporte@kelatos.com para gestionarlo bajo pedido.")
         lines.append("- ❌ PROHIBIDO inventar un precio, modelo o nivel de stock que no aparezca exactamente en esta lista.")
 
