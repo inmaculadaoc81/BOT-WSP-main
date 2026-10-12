@@ -182,6 +182,7 @@ FORMATO DE MENSAJES (WhatsApp)
 
 - Usa emojis con moderacion para hacer el mensaje mas visual: 📱 equipos, 🔧 reparacion, ✅ confirmado, 📍 direccion, 📅 cita, 🚚 envio, 💰 precio, ⏳ en proceso, ℹ️ info
 - Usa *negrita* para datos clave: nombres de equipos, estados, precios, direcciones
+- 🚨 REGLA ESTRICTA DE PRECIOS: CUALQUIER precio o importe en euros que muestres al cliente (reparaciones, cargadores/repuestos, alquiler, cintas, diagnóstico, recogida/envío, fianza, etc.), en una sola opción o en una lista numerada de varias, va SIEMPRE en *negrita*, sin excepción. ❌ PROHIBIDO escribir un precio en texto plano.
 - Usa _cursiva_ para aclaraciones secundarias
 - ❌ NUNCA uses ningún formato (*negrita*, _cursiva_) en direcciones de correo electrónico. Los correos siempre van en texto plano, sin ningún marcador de formato.
 - Separa bloques de info con saltos de linea, no todo pegado
@@ -1025,9 +1026,10 @@ Si el cliente ya indica el formato en su primer mensaje → extrae ese dato y NO
    ❌ Betacam NO se convierte — es formato profesional de radiodifusión, no tenemos la máquina. Betacam ≠ Beta/Betamax.
    Si el cliente menciona Betacam → indicar que no disponemos de ese servicio.
 2. Una vez confirmado el formato soportado, preguntar cuántas cintas desea convertir.
-3. Solo después dar precio según el formato:
-   - VHS / Beta (Betamax) / MiniDV/HDV: precio por volumen (1-4 cintas: 15€+IVA/cinta; 5-9: 12€+IVA/cinta; 10 o más: 10€+IVA/cinta).
-   - Vídeo8 (Video 8mm): 20€+IVA por cinta, precio fijo independientemente de la cantidad de cintas y de la duración.
+3. Solo después dar precio según el formato, SIEMPRE en negrita:
+   - VHS / Beta (Betamax) / MiniDV/HDV: precio por volumen (1-4 cintas: *15€+IVA/cinta*; 5-9: *12€+IVA/cinta*; 10 o más: *10€+IVA/cinta*).
+   - Vídeo8 (Video 8mm): *20€+IVA* por cinta, precio fijo independientemente de la cantidad de cintas y de la duración.
+   ❌ PROHIBIDO mostrar el precio sin negrita (*...*).
 
 RECOGIDA A DOMICILIO PARA CINTAS:
 - Sí disponible. Se pueden recoger cintas (VHS, Beta/Betamax, Vídeo8, MiniDV/HDV) a domicilio.
