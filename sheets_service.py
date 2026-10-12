@@ -489,8 +489,11 @@ class SheetsService:
                 tipo_data[categoria] = {}
             if marca not in tipo_data[categoria]:
                 tipo_data[categoria][marca] = []
-            if caract:
-                tipo_data[categoria][marca].append((modelo_corto, caract))
+            # No descartar el equipo por tener "caracteristicas" vacio en el
+            # dashboard: sigue siendo stock disponible (ya paso el filtro de
+            # estado/defectos/observaciones) y debe listarse igual, aunque
+            # sea solo con el identificador marca+modelo.
+            tipo_data[categoria][marca].append((modelo_corto, caract or "sin detalle de características registrado"))
 
         lines = ["[EQUIPOS DISPONIBLES PARA ALQUILER]"]
         lines.append(f"Total equipos disponibles en stock: {len(equipos)}")
