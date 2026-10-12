@@ -573,21 +573,23 @@ class SheetsService:
         lines.append(f"Total cargadores en catálogo interno: {len(cargadores)}\n")
         for c in cargadores:
             nombre = c.get("nombre", "")
-            precio = _format_price_es(c.get("precio_cliente", ""))
+            precio = _format_price_es(c.get("precio_con_iva", ""))
             stock = c.get("stock_disponible", 0) or 0
             disponibilidad = f"EN STOCK ({stock} uds)" if stock > 0 else "SIN STOCK (bajo pedido)"
-            lines.append(f"- {nombre} | Precio: {precio}€ | {disponibilidad}")
+            lines.append(f"- {nombre} | Precio (IVA incluido): {precio}€ | {disponibilidad}")
 
         lines.append("")
         lines.append("INSTRUCCIONES OBLIGATORIAS — CARGADORES:")
         lines.append("- Estos son datos REALES de nuestro catálogo interno (Don Cargador). Usa SOLO esta información — nunca inventes un modelo, precio o stock que no esté literalmente en esta lista.")
+        lines.append("- El precio de esta lista YA incluye el IVA (21%) — es el precio final de venta al cliente. Nunca lo recalcules ni le apliques IVA de nuevo.")
         lines.append("- Si el cliente menciona una marca (Dell, HP, Lenovo, Acer, Asus/MSI/Gigabyte, Dyson, etc.), filtra y muestra SOLO los cargadores de esa marca.")
         lines.append("- Si hay varios modelos de la misma marca, muestra los que mejor coincidan con lo que describe el cliente (vatios, tipo de conector/boquilla, modelo de equipo) para ayudarle a identificar el suyo — no hace falta listar todos si son muchos.")
-        lines.append("- FORMATO OBLIGATORIO al mostrarle las opciones al cliente (igual que en ALQUILER DE PORTÁTILES):")
-        lines.append("    Opción 1️⃣: *[nombre del cargador]* — [precio]€")
-        lines.append("    Opción 2️⃣: *[nombre del cargador]* — [precio]€")
+        lines.append("- FORMATO OBLIGATORIO al mostrarle las opciones al cliente (igual que en ALQUILER DE PORTÁTILES), con el precio SIEMPRE en negrita:")
+        lines.append("    Opción 1️⃣: *[nombre del cargador]* — *[precio]€*")
+        lines.append("    Opción 2️⃣: *[nombre del cargador]* — *[precio]€*")
         lines.append("    _(y así sucesivamente)_")
         lines.append("  ❌ PROHIBIDO usar guiones, puntos o bullets. Usar siempre 'Opción 1️⃣:' 'Opción 2️⃣:' etc.")
+        lines.append("  ❌ PROHIBIDO mostrar el precio sin negrita (*...*).")
         lines.append("- ❌ NUNCA muestres al cliente el número de unidades en stock, ni la palabra 'stock', 'uds' o 'unidades', ni copies literalmente 'EN STOCK (X uds)' / 'SIN STOCK'. Esa parte de la lista es solo para que TÚ decidas qué decir, nunca para pegarla en el mensaje.")
         lines.append("- Si el cargador está EN STOCK (stock_disponible > 0): no menciones disponibilidad salvo que el cliente pregunte — y si pregunta, responde de forma natural sin número ni la palabra 'stock' (ej: 'sí, lo tenemos disponible para recogida inmediata en tienda').")
         lines.append("- Si está SIN STOCK (stock_disponible = 0): indica de forma natural que hay que pedirlo, sin prometer fecha exacta y sin usar la palabra 'stock' (ej: 'ese modelo lo gestionamos bajo pedido, no tenemos unidad física ahora mismo').")

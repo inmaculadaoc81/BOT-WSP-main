@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 import httpx
 
@@ -38,6 +39,23 @@ def _inferir_tipo_equipo(marca: str, modelo: str, caracteristicas: str) -> str:
     if any(k in texto for k in ("gaming", "gamer", "rtx", "gtx", "radeon rx")):
         return "Gamer"
     return "Portátil"
+
+
+_IVA_RATE = Decimal("1.21")  # IVA 21% — ver "Siempre se emite factura con IVA (21%)" en config.py
+
+
+def _precio_con_iva(precio_cliente: str) -> str:
+    """"precio_cliente" en /v1/stock_piezas es el precio SIN IVA (columna
+    "Precio cliente" del dashboard) — el que se le debe mostrar al cliente
+    es "Total cliente" (CON IVA), una columna distinta que la API no expone
+    directamente. Se calcula aqui aplicando el 21% fijo del negocio, en vez
+    de mostrar el precio sin IVA tal cual (bug detectado: el bot enseñaba
+    70,25€ cuando el precio real de venta es 85,00€)."""
+    try:
+        total = (Decimal(precio_cliente) * _IVA_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return str(total)
+    except (InvalidOperation, TypeError):
+        return precio_cliente
 
 
 def _candidate_phones(phone: str) -> list[str]:
@@ -241,10 +259,11 @@ class KelatosApiService:
             nombre = str(r.get("nombre", "")).strip()
             if "CARGADOR" not in categoria or "PRUEBA" in nombre.upper():
                 continue
+            precio_cliente = str(r.get("precio_cliente", "")).strip()
             cargadores.append({
                 "referencia": str(r.get("referencia", "")).strip(),
                 "nombre": nombre,
-                "precio_cliente": str(r.get("precio_cliente", "")).strip(),
+                "precio_con_iva": _precio_con_iva(precio_cliente),
                 "stock_disponible": r.get("stock_disponible") or 0,
             })
         logger.info(f"Found {len(cargadores)} cargadores en stock_piezas")

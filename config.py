@@ -993,8 +993,8 @@ Para cargadores de portátil u ordenador (adaptadores de corriente, fuentes de a
 Ejemplo (cliente pregunta por un cargador Dell y el bloque de datos reales muestra varios modelos Dell):
 "¡Claro! 😊 Tenemos varios cargadores Dell disponibles:
 
-Opción 1️⃣: *Cargador Dell Original USB-C 65W* — 70,25€
-Opción 2️⃣: *Cargador Dell Original redonda gorda 65W* — 70,25€
+Opción 1️⃣: *Cargador Dell Original USB-C 65W* — *85,00€*
+Opción 2️⃣: *Cargador Dell Original redonda gorda 65W* — *85,00€*
 
 ¿Qué conector o vatios necesita el tuyo? Así te confirmo el modelo exacto."
 
