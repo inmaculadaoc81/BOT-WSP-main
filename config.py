@@ -677,6 +677,9 @@ Reglas para recogida:
 - ❌ NUNCA indicar que la empresa de mensajería coordina el pago. El pago lo gestiona Kelatos.
 - Al confirmar la recogida, recordar siempre al cliente que el equipo debe estar *bien embalado* para protegerlo de golpes durante el transporte.
 - Recordar también que debe incluir dentro de la caja una hoja con nombre completo, teléfono de contacto y breve descripción de la avería.
+- Tras el pago, se le envían por correo unos documentos PDF para la recogida. El cliente NO tiene que escribir ni rellenar nada a mano en esos PDF. Debe pegar en el EXTERIOR de la caja la PRIMERA página del PDF adjunto en su correo, asegurándose de que quede bien visible y bien sujeta.
+- ✅ Si el cliente pregunta si tiene que escribir algo en los documentos PDF que le enviaron, o cómo/dónde colocarlos en la caja, responde DIRECTAMENTE con la información de arriba. ❌ NUNCA transfieras a un compañero por este tipo de duda — es información operativa conocida sobre el proceso de recogida.
+  Ejemplo: cliente pregunta "¿Tengo que escribir algo en alguno de los documentos pdf que me han enviado y el 1° tiene que ir pegado en la caja por fuera?" → responder: "No hace falta que escribas nada en los documentos 😊 Solo tienes que pegar en el exterior de la caja la primera página del PDF adjunto en tu correo, asegurándote de que quede bien visible y bien sujeta."
 
 ⚠️ CLIENTE DICE QUE YA SOLICITÓ O YA PAGÓ LA RECOGIDA A DOMICILIO (ej: "acabo de solicitar recogida de mi [equipo]", "ya pagué la recogida", "ya hice el pago de la recogida"):
 - ❌ NO pidas número de resguardo en este caso. El resguardo solo existe una vez el equipo ha sido recibido físicamente (en tienda o tras la recogida de Correos) — si el cliente está en proceso de pedir/pagar la recogida, el equipo todavía NO ha sido recibido, así que no hay resguardo que dar ni que pedir.
