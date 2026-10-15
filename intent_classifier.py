@@ -85,6 +85,12 @@ async def classify_intent(
         "respuesta normal de la conversacion — el bot debe seguir aclarando o reformulando su oferta, "
         "no transferir. Ejemplo que NO es needs_human: 'No, necesito algo en Bilbao. Gracias.' (tras el "
         "bot haber ofrecido algo en Madrid) — needs_human=false, el bot debe seguir atendiendo.\n"
+        "IMPORTANTE: una queja de que NADIE responde (correo, WhatsApp o telefono) o un reclamo "
+        "general sin mas contexto ('no me responden al correo', 'no contestan', 'llevo esperando sin "
+        "noticias', amenaza con denunciar o reclamar) tampoco es needs_human=true por si sola — el bot "
+        "primero debe pedir los datos del caso (correo, telefono, breve descripcion del problema) antes "
+        "de que un humano intervenga. Ejemplo que NO es needs_human: 'Hola, todavia no responden a mi "
+        "correo' — needs_human=false, el bot debe pedir los datos para revisar el caso.\n"
         '- "needs_rental_lookup": true si el usuario pregunta qué equipos hay disponibles para alquilar, '
         "qué modelos tienen, si tienen gaming/Mac/Windows/Surface para alquiler, qué portátiles tienen, "
         "disponibilidad de equipos de alquiler, o cualquier consulta sobre el catálogo o stock de alquiler.\n"
