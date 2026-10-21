@@ -1,7 +1,9 @@
 [FAQ HP]
 
 SERVICIOS HP:
-- NO reparamos ni asesoramos sobre impresoras HP.
+- De HP reparamos SOLO ordenadores y portátiles que estén FUERA de garantía del fabricante.
+- NO reparamos ni asesoramos sobre impresoras (ninguna marca, tampoco HP). Nunca digas ni insinúes que reparamos impresoras.
+- Si el equipo HP está en garantía del fabricante, no lo reparamos: indicar que contacte con el servicio técnico oficial de HP.
 - Algunos repuestos HP están en tienda; otros se piden bajo demanda.
 - Para localizar un repuesto suele hacer falta el número de parte exacto.
 
