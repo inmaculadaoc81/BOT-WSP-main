@@ -453,9 +453,13 @@ class SheetsService:
         if not equipos:
             return (
                 "[EQUIPOS DISPONIBLES PARA ALQUILER]\n"
-                "No hay equipos disponibles en este momento.\n"
+                "No hay NINGUN equipo disponible en este momento. Esta lista esta VACIA.\n"
                 "INSTRUCCIONES: Informa al cliente de que actualmente no hay stock disponible "
-                "y ofrécele dejar sus datos para ser contactado cuando haya disponibilidad."
+                "y ofrécele dejar sus datos para ser contactado cuando haya disponibilidad. "
+                "PROHIBIDO ABSOLUTO: NO inventes ni menciones ningun modelo, marca ni caracteristica "
+                "(procesador, RAM, SSD, pantalla, etc.) de ningun equipo — no existe ese dato, la lista "
+                "esta vacia. Decir que hay un Surface Pro 7 o un MacBook Air disponible cuando no los hay "
+                "es tan grave como inventar un precio."
             )
 
         # Group equipment by client-facing category → marca → list of caracteristicas
@@ -542,6 +546,7 @@ class SheetsService:
         lines.append("- ✅ USA el identificador abreviado marca+modelo (ej: *HP 15-bc*) al inicio de cada opción. ❌ NUNCA uses el nombre completo del modelo.")
         lines.append("- ❌ NUNCA listes marcas ni características sin que el cliente haya indicado primero el tipo.")
         lines.append("- ❌ NUNCA ofrezcas un tipo diferente al solicitado sin antes informar de que no hay del tipo pedido.")
+        lines.append("🚨 PROHIBIDO ABSOLUTO: NUNCA inventes un equipo, marca, modelo o característica (procesador, RAM, SSD, pantalla, etc.) que no aparezca LITERALMENTE en la lista interna de arriba. Si el cliente pide un tipo (ej. Microsoft Surface, Mac) y ese tipo NO aparece en la lista, dile honestamente que no hay disponibilidad de ese tipo ahora mismo — nunca completes con equipos inventados para sonar útil.")
         lines.append("- La disponibilidad final siempre la confirma un asistente.")
         lines.append("")
         lines.append("REGLA — CONSULTA POR OPCIÓN MÁS ECONÓMICA:")
