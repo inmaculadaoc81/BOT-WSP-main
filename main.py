@@ -204,6 +204,38 @@ def _ensure_warranty_disclaimer(text: str) -> str:
     return "\n".join(lines)
 
 
+# Mismo problema que el aviso de garantia: dentro del bloque de beneficios,
+# el modelo repetidamente recorta la linea de diagnostico a un "GRATUITO"
+# incondicional, omitiendo que solo aplica a ordenadores/portatiles/consolas/
+# Surface/Dyson/Thermomix y que el resto (robots aspiradores, pequeño
+# electrodomestico, etc.) es de pago (20€+IVA) — reportado varias veces en
+# produccion (KitchenAid, Xiaomi) pese al refuerzo del prompt. Dentro de este
+# bloque la linea SIEMPRE debe ser la version condicional completa, nunca un
+# "GRATUITO" aislado por equipo, asi que es seguro corregirla por codigo.
+_DIAGNOSTIC_LINE_TEXT = (
+    "✅ Diagnostico: *GRATUITO* para ordenadores/portátiles/consolas/Surface/"
+    "Dyson/Thermomix — *20€+IVA* para el resto de equipos (robots aspiradores, "
+    "pequeño electrodoméstico, etc.)"
+)
+
+
+def _ensure_conditional_diagnostic_line(text: str) -> str:
+    """Si el bloque de beneficios incluye una linea de diagnostico que dice
+    "gratuito" sin mencionar el coste de pago (20€), la reemplaza por la
+    version condicional completa — nunca se debe afirmar gratuito sin
+    condicion dentro de este bloque."""
+    if _BENEFITS_BLOCK_MARKER not in text:
+        return text
+
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        lower = line.lower()
+        if "diagn" in lower and "gratuit" in lower and "20" not in line and "€" not in line:
+            logger.warning("Linea de diagnostico sin condicion de pago — corregida por codigo")
+            lines[i] = _DIAGNOSTIC_LINE_TEXT
+    return "\n".join(lines)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
@@ -462,6 +494,7 @@ async def receive_message(request: Request):
             )
         logger.info("RAW AI RESPONSE (WhatsApp):\n%s", ai_response)
         ai_response = _ensure_warranty_disclaimer(ai_response)
+        ai_response = _ensure_conditional_diagnostic_line(ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:
@@ -1140,6 +1173,7 @@ async def chatwoot_webhook(request: Request):
             )
         logger.info("RAW AI RESPONSE (Chatwoot):\n%s", ai_response)
         ai_response = _ensure_warranty_disclaimer(ai_response)
+        ai_response = _ensure_conditional_diagnostic_line(ai_response)
 
         # Check if AI wants to transfer to agent (product purchase)
         if "TRANSFERIR_AGENTE" in ai_response:

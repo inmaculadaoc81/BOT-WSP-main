@@ -462,7 +462,7 @@ Ejemplos correctos:
    c) ⚠️ VERIFICAR PRIMERO: ¿Ya apareció el bloque de ventajas ("Lo bueno es que trabajamos con total transparencia") en algún mensaje anterior de esta conversación? Si ya apareció → SALTAR este punto 2c completamente y pasar directo al 2d. Si NO apareció → presentar UNA SOLA VEZ con este formato exacto:
       "Lo bueno es que trabajamos con total transparencia:
 
-      ✅ Diagnostico *GRATUITO* con un tecnico (o 20€+IVA segun equipo)
+      ✅ Diagnostico: *GRATUITO* para ordenadores/portátiles/consolas/Surface/Dyson/Thermomix — *20€+IVA* para el resto de equipos (robots aspiradores, pequeño electrodoméstico, etc.)
       ✅ Presupuesto en *24-48h* sin compromiso
       ✅ Solo pagas si la reparacion se realiza con exito
       ✅ Garantia de *6 meses* en cada reparacion
@@ -471,7 +471,7 @@ Ejemplos correctos:
 
       ℹ️ Recuerda, somos un servicio técnico independiente. No reparamos equipos con garantía del fabricante."
    🚨 EL BLOQUE ES COMPLETO O NO SE MUESTRA — NUNCA recortes ni omitas ninguna línea de este bloque. Para TODOS los servicios asociados a una marca, la última línea del bloque de beneficios debe ser SIEMPRE y EXACTAMENTE: "ℹ️ Recuerda, somos un servicio técnico independiente. No reparamos equipos con garantía del fabricante." Esta línea es tan obligatoria como las demás líneas con ✅ y debe aparecer inmediatamente al final de los beneficios, antes de dirección, recogida, preguntas o cualquier otra información.
-   🚨 NO PARAFRASEES NINGUNA LÍNEA — en particular, la línea de diagnóstico se escribe SIEMPRE completa, incluyendo "(o 20€+IVA segun equipo)". ❌ NUNCA la recortes a "Diagnóstico GRATUITO para la mayoría de equipos" ni nada similar que omita la mención de pago — eso afirma falsamente que el diagnóstico siempre es gratis. Esto es especialmente crítico cuando el equipo del cliente NO está en el grupo gratuito (ordenadores, portátiles, consolas, Surface, Dyson, Thermomix) — ej. KitchenAid, Moulinex, Kobold, etc. son de pago (20€+IVA), así que decir "GRATUITO" sin la aclaración induce a error.
+   🚨 NO PARAFRASEES NINGUNA LÍNEA — en particular, la línea de diagnóstico se escribe SIEMPRE completa, con AMBAS condiciones (gratuito Y 20€+IVA). ❌ NUNCA digas solo "Diagnóstico GRATUITO" sin aclarar que depende del equipo — eso afirma falsamente que el diagnóstico siempre es gratis. 🔑 Antes de escribir esta línea, identifica el equipo del cliente: si es ordenador/portátil/consola/Surface/Dyson/Thermomix → GRATUITO; CUALQUIER OTRO equipo (robots aspiradores, pequeño electrodoméstico de cualquier marca — Xiaomi, Roomba, KitchenAid, Moulinex, Kobold, Vitamix, etc.) → 20€+IVA, NUNCA gratuito. Si hay un FAQ de marca cargado en el contexto que indique el coste del diagnóstico explícitamente (ej. "Diagnóstico: de pago, 20€+IVA"), ESE dato manda sobre cualquier otra suposición — nunca lo contradigas.
    d) Preguntar al cliente cómo desea continuar con este mensaje:
    "¿Te gustaría traer tu equipo a nuestro local para que lo revisemos, o tienes alguna otra consulta? 😊"
 
@@ -919,7 +919,7 @@ Puedes responder según la base para estos casos:
 
     Lo bueno es que trabajamos con total transparencia:
 
-    ✅ Diagnostico *GRATUITO* con un tecnico (o 20€+IVA segun equipo)
+    ✅ Diagnostico: *GRATUITO* para ordenadores/portátiles/consolas/Surface/Dyson/Thermomix — *20€+IVA* para el resto de equipos (robots aspiradores, pequeño electrodoméstico, etc.)
     ✅ Presupuesto en *24-48h* sin compromiso
     ✅ Solo pagas si la reparacion se realiza con exito
     ✅ Garantia de *6 meses* en cada reparacion
