@@ -205,35 +205,53 @@ def _ensure_warranty_disclaimer(text: str) -> str:
 
 
 # Mismo problema que el aviso de garantia: dentro del bloque de beneficios,
-# el modelo repetidamente recorta la linea de diagnostico a un "GRATUITO"
-# incondicional, omitiendo que solo aplica a ordenadores/portatiles/consolas/
-# Surface/Dyson/Thermomix y que el resto (robots aspiradores, pequeño
-# electrodomestico, etc.) es de pago (20€+IVA) — reportado varias veces en
-# produccion (KitchenAid, Xiaomi) pese al refuerzo del prompt. Dentro de este
-# bloque la linea SIEMPRE debe ser la version condicional completa, nunca un
-# "GRATUITO" aislado por equipo, asi que es seguro corregirla por codigo.
-_DIAGNOSTIC_LINE_TEXT = (
-    "✅ Diagnostico: *GRATUITO* para ordenadores/portátiles/consolas/Surface/"
-    "Dyson/Thermomix — *20€+IVA* para el resto de equipos (robots aspiradores, "
-    "pequeño electrodoméstico, etc.)"
+# el modelo repetidamente afirma "GRATUITO" sin condicion para equipos que en
+# realidad son de pago (reportado con KitchenAid y Xiaomi) — y a la inversa,
+# un primer intento de arreglarlo por prompt hizo que el modelo empezara a
+# pegar la plantilla condicional completa ("GRATUITO para X — 20€+IVA para
+# Y") tal cual al cliente, en vez de resolverla (reportado con Rowenta). Esta
+# funcion resuelve la linea en base a si el texto menciona algun equipo del
+# grupo gratuito — nunca deja la plantilla sin resolver ni un "GRATUITO" sin
+# base real.
+_FREE_DIAGNOSTIC_KEYWORDS = (
+    "ordenador", "portátil", "portatil", "consola", "surface", "dyson", "thermomix",
+    "laptop", "notebook", "pc gaming", " pc ", "mac", "hp", "dell", "lenovo", "asus",
+    "msi", "toshiba", "acer", "gigabyte", "xbox", "playstation", "nintendo", "switch",
 )
+_DIAGNOSTIC_FREE_LINE = "✅ Diagnostico *GRATUITO*"
+_DIAGNOSTIC_PAID_LINE = "✅ Diagnostico *20€+IVA*"
 
 
 def _ensure_conditional_diagnostic_line(text: str) -> str:
-    """Si el bloque de beneficios incluye una linea de diagnostico que dice
-    "gratuito" sin mencionar el coste de pago (20€), la reemplaza por la
-    version condicional completa — nunca se debe afirmar gratuito sin
-    condicion dentro de este bloque."""
+    """Corrige la linea de diagnostico del bloque de beneficios en dos casos:
+    1. Dice "gratuito" sin ninguna mencion de coste de pago (20€/€) — una
+       afirmacion de gratuidad sin condicion, posiblemente falsa.
+    2. Pega la plantilla condicional completa sin resolver (contiene tanto
+       "gratuito" como "20€/€" en la misma linea, listando ambas opciones).
+    En ambos casos se reemplaza por la UNICA linea que corresponde, decidida
+    buscando palabras del grupo gratuito en el resto del mensaje."""
     if _BENEFITS_BLOCK_MARKER not in text:
         return text
 
     lines = text.split("\n")
-    for i, line in enumerate(lines):
-        lower = line.lower()
-        if "diagn" in lower and "gratuit" in lower and "20" not in line and "€" not in line:
-            logger.warning("Linea de diagnostico sin condicion de pago — corregida por codigo")
-            lines[i] = _DIAGNOSTIC_LINE_TEXT
-    return "\n".join(lines)
+    changed = False
+    diag_idx = [i for i, l in enumerate(lines) if "diagn" in l.lower() and "gratuit" in l.lower()]
+    if not diag_idx:
+        return text
+
+    # Busca las palabras del grupo gratuito SOLO fuera de las lineas de
+    # diagnostico — esas lineas pueden listar "ordenadores/portatiles/..."
+    # como parte de la plantilla sin resolver, lo que daria un falso
+    # positivo si se buscara en el texto completo.
+    rest_lower = "\n".join(l for i, l in enumerate(lines) if i not in diag_idx).lower()
+    es_gratuito = any(kw in rest_lower for kw in _FREE_DIAGNOSTIC_KEYWORDS)
+    resolved = _DIAGNOSTIC_FREE_LINE if es_gratuito else _DIAGNOSTIC_PAID_LINE
+
+    for i in diag_idx:
+        logger.warning(f"Linea de diagnostico sin resolver o sin condicion — corregida por codigo a: {resolved}")
+        lines[i] = resolved
+        changed = True
+    return "\n".join(lines) if changed else text
 
 
 @asynccontextmanager
