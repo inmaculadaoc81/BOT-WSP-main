@@ -73,6 +73,13 @@ class Settings(BaseSettings):
     # conversacion nueva y programa otro lead en EspoCRM (24 h = 86400).
     ESPOCRM_NEW_LEAD_AFTER_SECONDS: int = 86400
 
+    # Cuando un agente humano escribe en una conversacion, el bot se calla
+    # (modo "human") hasta que se resuelva o se desasigne el agente. Si
+    # nadie hace eso, la conversacion queda huerfana para siempre. Pasadas
+    # estas horas sin actividad del agente, el bot retoma automaticamente
+    # aunque nadie haya resuelto/desasignado (12h = media jornada+margen).
+    HUMAN_MODE_TIMEOUT_HOURS: int = 12
+
 
     # Bot personality (customize for your business)
     SYSTEM_PROMPT: str = """

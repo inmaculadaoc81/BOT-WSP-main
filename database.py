@@ -117,15 +117,35 @@ class Database:
             return datetime.fromisoformat(row[0])
 
     async def get_conversation_mode(self, phone_number: str) -> str:
-        """Get the current mode for a conversation (bot or human)."""
+        """Get the current mode for a conversation (bot or human).
+
+        Si el modo es "human" y lleva mas de HUMAN_MODE_TIMEOUT_HOURS sin
+        actividad del agente (nadie resolvio ni se desasigno), se revierte
+        automaticamente a "bot" para que la conversacion no quede huerfana.
+        """
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
-                "SELECT mode FROM conversations WHERE phone_number = ?",
+                "SELECT mode, updated_at FROM conversations WHERE phone_number = ?",
                 (phone_number,),
             )
             row = await cursor.fetchone()
-            return row["mode"] if row else "bot"
+
+        if not row:
+            return "bot"
+        if row["mode"] != "human":
+            return row["mode"]
+
+        timeout_hours = settings.HUMAN_MODE_TIMEOUT_HOURS
+        last_update = datetime.fromisoformat(row["updated_at"])
+        if last_update.tzinfo is None:
+            last_update = last_update.replace(tzinfo=timezone.utc)
+        idle = datetime.now(timezone.utc) - last_update
+        if idle > timedelta(hours=timeout_hours):
+            await self.set_conversation_mode(phone_number, "bot")
+            return "bot"
+
+        return "human"
 
     async def set_conversation_mode(self, phone_number: str, mode: str):
         """Set conversation mode to 'bot' or 'human'."""
