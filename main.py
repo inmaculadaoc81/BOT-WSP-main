@@ -466,11 +466,13 @@ async def receive_message(request: Request):
         if caption:
             extra_context_parts.append(
                 "[ADJUNTO RECIBIDO]\n"
-                "El cliente envió una imagen/video junto con este texto. NO puedes ver el "
-                "contenido de la imagen, solo el texto. Si el mensaje depende de algo que "
-                "solo se ve en la imagen (ej: 'esta pieza', 'este fallo', 'aquí tienes'), "
-                "acláraselo con amabilidad y pide que lo describa con palabras, sin dejar de "
-                "responder a lo que sí puedas interpretar del texto."
+                "El cliente envió una imagen/video junto con este texto. INSTRUCCIONES "
+                "OBLIGATORIAS para tu respuesta: 1) responde normalmente a lo que escribió en "
+                "el texto (síguelo como un mensaje de texto normal), Y 2) indica con amabilidad "
+                "que todavía no puedes ver el contenido de imágenes/videos, así que si su "
+                "consulta depende de algo que solo se ve ahí (ej: 'esta pieza', 'este fallo', "
+                "'aquí tienes'), que lo describa también con palabras. Ambas partes van SIEMPRE "
+                "juntas en la misma respuesta, nunca solo una de las dos."
             )
 
         if session_context_wa:
@@ -1151,11 +1153,13 @@ async def chatwoot_webhook(request: Request):
         if attachments and content:
             extra_context_parts.append(
                 "[ADJUNTO RECIBIDO]\n"
-                "El cliente envió una imagen/video/archivo junto con este texto. NO puedes ver "
-                "el contenido del adjunto, solo el texto. Si el mensaje depende de algo que solo "
-                "se ve en el adjunto (ej: 'esta pieza', 'este fallo', 'aquí tienes'), acláraselo "
-                "con amabilidad y pide que lo describa con palabras, sin dejar de responder a lo "
-                "que sí puedas interpretar del texto."
+                "El cliente envió una imagen/video/archivo junto con este texto. INSTRUCCIONES "
+                "OBLIGATORIAS para tu respuesta: 1) responde normalmente a lo que escribió en "
+                "el texto (síguelo como un mensaje de texto normal), Y 2) indica con amabilidad "
+                "que todavía no puedes ver el contenido de imágenes/videos/archivos, así que si "
+                "su consulta depende de algo que solo se ve ahí (ej: 'esta pieza', 'este fallo', "
+                "'aquí tienes'), que lo describa también con palabras. Ambas partes van SIEMPRE "
+                "juntas en la misma respuesta, nunca solo una de las dos."
             )
 
         # Detect returning session (gap > 4 hours)
