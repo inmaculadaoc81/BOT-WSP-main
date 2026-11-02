@@ -344,8 +344,18 @@ async def receive_message(request: Request):
             logger.info(f"Duplicate WhatsApp webhook delivery ignored (id={message_id})")
             return {"status": "duplicate_ignored"}
 
-        # Only handle text messages for now
-        if msg_type != "text":
+        # Si el cliente manda una imagen/video/documento CON texto (caption),
+        # WhatsApp lo entrega como message[msg_type]["caption"], no como
+        # message["text"]["body"]. Antes se ignoraba por completo (el cliente
+        # escribia su pregunta junto a la foto y el bot respondia "solo puedo
+        # leer mensajes de texto" sin ver ni una palabra de lo que pregunto).
+        # Si hay caption, se trata como mensaje de texto normal.
+        caption = None
+        if msg_type in ("image", "video", "document"):
+            caption = (message.get(msg_type) or {}).get("caption")
+
+        # Only handle text messages (or media with a caption) for now
+        if msg_type != "text" and not caption:
             logger.info(f"Ignoring non-text message type: {msg_type}")
             if not _should_send_attachment_notice(sender):
                 logger.info(f"Attachment notice suppressed for {sender} (cooldown)")
@@ -374,7 +384,7 @@ async def receive_message(request: Request):
             )
             return {"status": "non-text ignored"}
 
-        text = message["text"]["body"]
+        text = message["text"]["body"] if msg_type == "text" else caption
         logger.info(f"Message from {sender}: {text}")
 
         # Per-phone rate limiting
@@ -452,6 +462,16 @@ async def receive_message(request: Request):
 
         # Fetch only what's needed based on classification
         extra_context_parts = []
+
+        if caption:
+            extra_context_parts.append(
+                "[ADJUNTO RECIBIDO]\n"
+                "El cliente envió una imagen/video junto con este texto. NO puedes ver el "
+                "contenido de la imagen, solo el texto. Si el mensaje depende de algo que "
+                "solo se ve en la imagen (ej: 'esta pieza', 'este fallo', 'aquí tienes'), "
+                "acláraselo con amabilidad y pide que lo describa con palabras, sin dejar de "
+                "responder a lo que sí puedas interpretar del texto."
+            )
 
         if session_context_wa:
             extra_context_parts.append(session_context_wa)
@@ -978,12 +998,15 @@ async def chatwoot_webhook(request: Request):
                     # con el procesamiento normal del bot para no dejar al
                     # cliente sin respuesta.
 
-        # Detect attachments (images, audio, video, files) or empty content
+        # Detect attachments (images, audio, video, files) with no caption text,
+        # or empty content. Si el cliente manda una foto CON texto (caption),
+        # Chatwoot lo entrega igualmente en "content" — antes se ignoraba ese
+        # texto por completo solo porque tambien venia un adjunto.
         attachments = body.get("attachments", [])
-        if attachments or not content:
+        if not content:
             if attachments:
                 file_type = attachments[0].get("file_type", "file")
-                logger.info(f"Received {file_type} attachment in conversation {conversation_id}")
+                logger.info(f"Received {file_type} attachment with no caption in conversation {conversation_id}")
             else:
                 logger.info(f"Empty content in conversation {conversation_id}")
             if _should_send_attachment_notice(f"chatwoot_{conversation_id}"):
@@ -1124,6 +1147,16 @@ async def chatwoot_webhook(request: Request):
 
         # Fetch only what's needed based on classification
         extra_context_parts = []
+
+        if attachments and content:
+            extra_context_parts.append(
+                "[ADJUNTO RECIBIDO]\n"
+                "El cliente envió una imagen/video/archivo junto con este texto. NO puedes ver "
+                "el contenido del adjunto, solo el texto. Si el mensaje depende de algo que solo "
+                "se ve en el adjunto (ej: 'esta pieza', 'este fallo', 'aquí tienes'), acláraselo "
+                "con amabilidad y pide que lo describa con palabras, sin dejar de responder a lo "
+                "que sí puedas interpretar del texto."
+            )
 
         # Detect returning session (gap > 4 hours)
         if last_msg_time and gap is not None and gap >= 4 * 3600:
