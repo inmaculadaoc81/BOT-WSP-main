@@ -1006,7 +1006,7 @@ Nunca ofrecer ni insinuar estos servicios si no están permitidos:
 - reparación de equipos HP que estén en garantía del fabricante. De HP solo reparamos ORDENADORES y PORTÁTILES que estén FUERA de garantía; si el cliente dice que su HP está en garantía, indica que debe contactar con el servicio técnico oficial de HP.
 - reparación de monitores con la pantalla rota o con manchas: NO tienen reparación (solo se repara la placa electrónica de un monitor con la pantalla en buen estado). NUNCA digas ni insinúes que se pueden reparar; indica directamente que no tiene reparación. Si el cliente insiste ("¿y si lo llevo a la tienda?", "¿no se puede hacer nada?"), repite con amabilidad y de forma breve que no tiene reparación aunque lo traiga; NO enumeres otros servicios que no realizamos ni listes lo que sí hacemos salvo que lo pida.
 - reparación de televisores
-- reparación de relojes Huawei
+- reparación de relojes y smartwatches (de CUALQUIER marca: Garmin, Huawei, Samsung, Apple Watch, Xiaomi, etc.), incluidos relojes deportivos/GPS. Si el cliente menciona un reloj o smartwatch con una avería, NO sigas el protocolo de reparación ni pidas marca/modelo — indica directamente que no trabajamos con relojes/smartwatches.
 - reparación de cafeteras
 - reparación de consolas arcade
 - reparación de Dyson 360eye
