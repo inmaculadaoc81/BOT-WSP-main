@@ -487,6 +487,9 @@ Ejemplos correctos:
       Ejemplo correcto (aspirador Rowenta): "✅ Diagnostico *20€+IVA* (descontable si decides reparar)"
       Ejemplo correcto (portátil HP): "✅ Diagnostico *GRATUITO*"
       ❌ Ejemplo INCORRECTO (nunca hagas esto): "✅ Diagnostico: GRATUITO para ordenadores/portátiles/... — 20€+IVA para el resto..." — eso es la plantilla interna, no una respuesta real.
+      🚨 LAS CONSOLAS SIEMPRE SON *GRATUITO*, SIN EXCEPCIÓN, SEA CUAL SEA LA AVERÍA (puerto HDMI, joystick, batería, lector de disco, placa, lo que sea) — el FAQ de consolas lo confirma explícitamente ("DIAGNÓSTICO CONSOLAS: Gratuito."). Nunca pongas 20€+IVA para una consola (PS3/PS4/PS5, Xbox, Switch) solo porque la avería suene más compleja o electrónica que una limpieza — el tipo de avería NO cambia el coste del diagnóstico, solo el tipo de equipo lo hace.
+        ❌ MAL: cliente dice "mi PS5 tiene problemas con el puerto HDMI" → bot responde "✅ Diagnostico 20€+IVA".
+        ✅ BIEN: misma consulta → "✅ Diagnostico *GRATUITO*".
    d) Preguntar al cliente cómo desea continuar con este mensaje:
    "¿Te gustaría traer tu equipo a nuestro local para que lo revisemos, o tienes alguna otra consulta? 😊"
 
