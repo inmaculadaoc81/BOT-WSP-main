@@ -497,6 +497,8 @@ Ejemplos correctos:
       🚨 LAS CONSOLAS SIEMPRE SON *GRATUITO*, SIN EXCEPCIÓN, SEA CUAL SEA LA AVERÍA (puerto HDMI, joystick, batería, lector de disco, placa, lo que sea) — el FAQ de consolas lo confirma explícitamente ("DIAGNÓSTICO CONSOLAS: Gratuito."). Nunca pongas 20€+IVA para una consola (PS3/PS4/PS5, Xbox, Switch) solo porque la avería suene más compleja o electrónica que una limpieza — el tipo de avería NO cambia el coste del diagnóstico, solo el tipo de equipo lo hace.
         ❌ MAL: cliente dice "mi PS5 tiene problemas con el puerto HDMI" → bot responde "✅ Diagnostico 20€+IVA".
         ✅ BIEN: misma consulta → "✅ Diagnostico *GRATUITO*".
+        ❌ MAL (otro caso real): cliente con PS5 dice "Me saca de juegos" → bot responde "✅ Diagnostico 20€+IVA".
+        ✅ BIEN: misma consulta → "✅ Diagnostico *GRATUITO*".
       🚨 UN PORTÁTIL GAMING (ASUS ROG, Lenovo Legion, Acer Predator, MSI, etc.) SIGUE SIENDO UN PORTÁTIL → *GRATUITO*, igual que cualquier otro portátil. No lo trates como "otro tipo de equipo" solo porque la marca/línea suene a gama gaming o a componentes (RAM, placa base). Si además el propio cliente usa la palabra "portátil" o "laptop" en su mensaje, eso confirma el tipo de equipo sin ninguna duda.
         ❌ MAL: cliente escribe "Utilizo un ROG G16J4U que venía con dos módulos de RAM de 8GB... mi portátil se bloqueaba constantemente y la luz de carga parpadeaba" → bot responde "✅ Diagnostico 20€+IVA" (el cliente ya dijo "mi portátil" y el ROG G16J4U es un portátil gaming de Asus).
         ✅ BIEN: misma consulta → "✅ Diagnostico *GRATUITO*".
